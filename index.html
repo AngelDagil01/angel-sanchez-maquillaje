@@ -496,7 +496,7 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc, deleteDoc, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
   import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
   const firebaseConfig = {
@@ -514,7 +514,7 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
 
   window.db = db;
   window.storage = storage;
-  window.firestoreModules = { doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc, deleteDoc, query, where };
+  window.firestoreModules = { doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc, deleteDoc, query, where, onSnapshot };
   window.storageModules = { ref, uploadBytes, getDownloadURL, deleteObject };
 
   if (typeof window.initAppFromCloud === 'function') {
@@ -646,8 +646,90 @@ async function initAppFromCloud(){
   }
   renderAll();
   checkUserSessionModal();
+
+  // Después de la carga inicial, queda escuchando cambios de Firebase.
+  // Así no es necesario recargar la página en ningún dispositivo.
+  startRealtimeSync();
 }
 window.initAppFromCloud = initAppFromCloud;
+
+// Sincronización en tiempo real con Firestore.
+// Mantiene la interfaz actual y actualiza automáticamente todos los dispositivos
+// cuando el administrador cambia información en Firebase.
+let realtimeUnsubscribers = [];
+
+function startRealtimeSync(){
+  if(!window.db || !window.firestoreModules) return;
+
+  // Evita crear listeners duplicados si initAppFromCloud() se ejecuta otra vez.
+  realtimeUnsubscribers.forEach(unsub => {
+    try { unsub(); } catch(e) {}
+  });
+  realtimeUnsubscribers = [];
+
+  const { doc, collection, onSnapshot } = window.firestoreModules;
+
+  const listen = (target, callback, label) => {
+    try {
+      const unsub = onSnapshot(target, callback, (error) => {
+        console.error(`Error en sincronización ${label}:`, error);
+      });
+      realtimeUnsubscribers.push(unsub);
+    } catch(e) {
+      console.error(`No se pudo iniciar sincronización ${label}:`, e);
+    }
+  };
+
+  // Textos editables del sitio.
+  listen(doc(window.db, "config", "texts"), snap => {
+    if(snap.exists()){
+      siteData.texts = snap.data();
+      loadSectionTexts();
+    }
+  }, "textos");
+
+  // Servicios y precios.
+  listen(collection(window.db, "services"), snap => {
+    siteData.services = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+    renderServices();
+    renderFinancialStats();
+  }, "servicios");
+
+  // Carrusel + galería.
+  listen(collection(window.db, "gallery"), snap => {
+    const items = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+    siteData.heroImages = items.filter(item => item.type === 'hero').map(item => item.src);
+    siteData.gallery = items.filter(item => item.type !== 'hero');
+    renderCarousel();
+    renderGallery();
+  }, "galería");
+
+  // Secciones personalizadas.
+  listen(collection(window.db, "customSections"), snap => {
+    siteData.customSections = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+    renderCustomSections();
+  }, "secciones");
+
+  // Reseñas.
+  listen(collection(window.db, "reviews"), snap => {
+    siteData.reviews = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+    renderReviews();
+  }, "reseñas");
+
+  // Citas: este es el listener importante para que el estado
+  // cambiado por el administrador aparezca en tiempo real al cliente.
+  listen(collection(window.db, "appointments"), snap => {
+    appointmentsData = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+    renderAppts();
+    renderConfirmed();
+
+    // Si el usuario tiene abierto su perfil, actualiza también sus contadores.
+    if(document.getElementById('userProfileModal')?.classList.contains('active')){
+      openProfileModal();
+    }
+  }, "citas");
+}
+
 
 async function saveSectionText(key, text){
   siteData.texts[key] = text.trim();
