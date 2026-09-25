@@ -497,21 +497,25 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
   const firebaseConfig = {
       apiKey: "AIzaSyArxSYDEJW5nksY807uXWNCUD7_r1d-MY",
       authDomain: "angel-sanchez-maquillaje.firebaseapp.com",
       projectId: "angel-sanchez-maquillaje",
-      storageBucket: "angel-sanchez-maquillajefirebasestorage.app",
+      storageBucket: "angel-sanchez-maquillaje.firebasestorage.app",
       messagingSenderId: "886361571313",
       appId: "1:886361571313:web:7f498a8d72101d6c284e50"
   };
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
+  const storage = getStorage(app);
 
   window.db = db;
+  window.storage = storage;
   window.firestoreModules = { doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc, deleteDoc, query, where };
+  window.storageModules = { ref, uploadBytes, getDownloadURL, deleteObject };
 
   if (typeof window.initAppFromCloud === 'function') {
     window.initAppFromCloud();
@@ -584,8 +588,8 @@ async function initAppFromCloud(){
     });
     if(siteData.services.length === 0){
       for(const s of defaultServices){
-        await addDoc(servicesCol, s);
-        siteData.services.push(s);
+        const ref = await addDoc(servicesCol, s);
+        siteData.services.push({ id: ref.id, ...s });
       }
     }
 
@@ -602,11 +606,13 @@ async function initAppFromCloud(){
       for(const h of defaultHeroImages){
         await addDoc(galleryCol, { src: h, type: 'hero' });
       }
+      const seededGallery = [];
       for(const g of defaultGallery){
-        await addDoc(galleryCol, g);
+        const ref = await addDoc(galleryCol, g);
+        seededGallery.push({ id: ref.id, ...g });
       }
       siteData.heroImages = defaultHeroImages;
-      siteData.gallery = defaultGallery;
+      siteData.gallery = seededGallery;
     } else {
       siteData.heroImages = cloudGallery.filter(item => item.type === 'hero').map(item => item.src);
       siteData.gallery = cloudGallery.filter(item => item.type !== 'hero');
@@ -629,8 +635,8 @@ async function initAppFromCloud(){
     });
     if(siteData.reviews.length === 0){
       for(const r of defaultReviews){
-        await addDoc(reviewsCol, r);
-        siteData.reviews.push(r);
+        const ref = await addDoc(reviewsCol, r);
+        siteData.reviews.push({ id: ref.id, ...r });
       }
     }
 
@@ -894,11 +900,18 @@ async function loadHeroDocsFromCloud(){
 window.removeHeroImageDoc = async function(docId){
   if(!window.db) return;
   try {
-    const { doc, deleteDoc } = window.firestoreModules;
-    await deleteDoc(doc(window.db, "gallery", docId));
+    const { doc, getDoc, deleteDoc } = window.firestoreModules;
+    const ref = doc(window.db, "gallery", docId);
+    const snap = await getDoc(ref);
+    const data = snap.exists() ? snap.data() : null;
+    await deleteDoc(ref);
+    if(data && data.storagePath && window.storage){
+      try{ await window.storageModules.deleteObject(window.storageModules.ref(window.storage, data.storagePath)); }catch(e){}
+    }
     initAppFromCloud();
   } catch(e) {
     console.error("Error al eliminar imagen de carrusel:", e);
+    alert('No se pudo eliminar la imagen.');
   }
 }
 
@@ -1074,11 +1087,18 @@ function renderGallery(){
 async function removeGalleryImage(id){
   if(!window.db) return;
   try {
-    const { doc, deleteDoc } = window.firestoreModules;
-    await deleteDoc(doc(window.db, "gallery", id));
+    const { doc, getDoc, deleteDoc } = window.firestoreModules;
+    const ref = doc(window.db, "gallery", id);
+    const snap = await getDoc(ref);
+    const data = snap.exists() ? snap.data() : null;
+    await deleteDoc(ref);
+    if(data && data.storagePath && window.storage){
+      try{ await window.storageModules.deleteObject(window.storageModules.ref(window.storage, data.storagePath)); }catch(e){}
+    }
     initAppFromCloud();
   } catch(e) {
     console.error("Error al eliminar imagen de galería:", e);
+    alert('No se pudo eliminar la imagen.');
   }
 }
 
@@ -1193,21 +1213,33 @@ function renderCustomSections(){
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  async function uploadImageToStorage(file, folder){
+    if(!window.storage) throw new Error('Storage no disponible');
+    const { ref, uploadBytes, getDownloadURL } = window.storageModules;
+    const path = `${folder}/${Date.now()}_${file.name}`;
+    const sref = ref(window.storage, path);
+    await uploadBytes(sref, file);
+    const url = await getDownloadURL(sref);
+    return { url, path };
+  }
+
   const heroFileIn = document.getElementById('heroFileInput');
   if(heroFileIn){
     heroFileIn.addEventListener('change', function(e){
-      Array.from(e.target.files).forEach(file => {
-        const reader = new FileReader();
-        reader.onload = async ev => {
-          if(window.db){
-            const { collection, addDoc } = window.firestoreModules;
-            await addDoc(collection(window.db, "gallery"), { src: ev.target.result, type: 'hero' });
-            initAppFromCloud();
-          }
-        };
-        reader.readAsDataURL(file);
-      });
+      const files = Array.from(e.target.files);
       e.target.value = '';
+      files.forEach(async file => {
+        try{
+          if(!window.db) throw new Error('Base de datos no conectada');
+          const { url, path } = await uploadImageToStorage(file, 'hero');
+          const { collection, addDoc } = window.firestoreModules;
+          await addDoc(collection(window.db, "gallery"), { src: url, storagePath: path, type: 'hero' });
+          initAppFromCloud();
+        }catch(err){
+          console.error("Error al subir foto del carrusel:", err);
+          alert('No se pudo subir la foto al carrusel: ' + (err.message || err));
+        }
+      });
     });
   }
 
@@ -1215,18 +1247,20 @@ document.addEventListener('DOMContentLoaded', () => {
   if(fileIn){
     fileIn.addEventListener('change', function(e){
       const cat = document.getElementById('categorySelect').value;
-      Array.from(e.target.files).forEach(file => {
-        const reader = new FileReader();
-        reader.onload = async ev => {
-          if(window.db){
-            const { collection, addDoc } = window.firestoreModules;
-            await addDoc(collection(window.db, "gallery"), { src: ev.target.result, category: cat, type: 'gallery' });
-            initAppFromCloud();
-          }
-        };
-        reader.readAsDataURL(file);
-      });
+      const files = Array.from(e.target.files);
       e.target.value = '';
+      files.forEach(async file => {
+        try{
+          if(!window.db) throw new Error('Base de datos no conectada');
+          const { url, path } = await uploadImageToStorage(file, 'gallery');
+          const { collection, addDoc } = window.firestoreModules;
+          await addDoc(collection(window.db, "gallery"), { src: url, storagePath: path, category: cat, type: 'gallery' });
+          initAppFromCloud();
+        }catch(err){
+          console.error("Error al subir foto de la galería:", err);
+          alert('No se pudo subir la foto a la galería: ' + (err.message || err));
+        }
+      });
     });
   }
 });
@@ -1291,6 +1325,7 @@ document.getElementById('bookingForm').addEventListener('submit', async function
     renderAppts();
   } catch(err) {
     console.error("Error al guardar cita en Firebase:", err);
+    alert('No se pudo guardar tu cita en la base de datos, pero se enviará por WhatsApp.');
   }
 
   const msg = `Hola Angel, quiero reservar una cita:\n\nNombre: ${name}\nTeléfono: ${phone}\nFecha: ${date}\nHora: ${time}\nServicio: ${service}`;
