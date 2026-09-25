@@ -1376,7 +1376,7 @@ if(manualForm){
     };
 
     try {
-      const { collection, addDoc } = window.firestoreModules;
+      const { collection, addDoc }  = window.firestoreModules;
       const docRef = await addDoc(collection(window.db, "appointments"), newAppt);
       newAppt.id = docRef.id;
       appointmentsData.unshift(newAppt);
