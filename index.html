@@ -578,6 +578,13 @@ async function initAppFromCloud(){
       await setDoc(configRef, {});
     }
 
+    // Compatibilidad con la estructura que ya tienes en Firestore:
+    // settings/mainConfig contiene gallery y heroImages como arreglos.
+    // Se leen aquí para no perder las imágenes que ya están guardadas.
+    const mainConfigRef = doc(window.db, "settings", "mainConfig");
+    const mainConfigSnap = await getDoc(mainConfigRef);
+    const mainConfig = mainConfigSnap.exists() ? mainConfigSnap.data() : {};
+
     const servicesCol = collection(window.db, "services");
     const servicesSnap = await getDocs(servicesCol);
     siteData.services = [];
@@ -598,7 +605,21 @@ async function initAppFromCloud(){
       cloudGallery.push({ id: d.id, ...d.data() });
     });
 
-    if(cloudGallery.length === 0){
+    // Primero usamos los datos de settings/mainConfig si existen, porque
+    // esa es la estructura donde ya están almacenadas tus imágenes actuales.
+    const mainGallery = Array.isArray(mainConfig.gallery) ? mainConfig.gallery : [];
+    const mainHeroImages = Array.isArray(mainConfig.heroImages) ? mainConfig.heroImages : [];
+
+    if(mainGallery.length > 0 || mainHeroImages.length > 0){
+      siteData.heroImages = mainHeroImages;
+      siteData.gallery = mainGallery.map((item, index) => ({
+        id: item.id || `mainConfig-gallery-${index}`,
+        ...item
+      }));
+    } else if(cloudGallery.length > 0){
+      siteData.heroImages = cloudGallery.filter(item => item.type === 'hero').map(item => item.src);
+      siteData.gallery = cloudGallery.filter(item => item.type !== 'hero');
+    } else {
       for(const h of defaultHeroImages){
         await addDoc(galleryCol, { src: h, type: 'hero' });
       }
@@ -609,10 +630,11 @@ async function initAppFromCloud(){
       }
       siteData.heroImages = defaultHeroImages;
       siteData.gallery = seededGallery;
-    } else {
-      siteData.heroImages = cloudGallery.filter(item => item.type === 'hero').map(item => item.src);
-      siteData.gallery = cloudGallery.filter(item => item.type !== 'hero');
     }
+
+    // Si mainConfig también contiene secciones personalizadas, las dejamos
+    // disponibles como respaldo de la colección customSections.
+    const mainCustomSections = Array.isArray(mainConfig.customSections) ? mainConfig.customSections : [];
 
     const customCol = collection(window.db, "customSections");
     const customSnap = await getDocs(customCol);
@@ -620,6 +642,12 @@ async function initAppFromCloud(){
     customSnap.forEach(d => {
       siteData.customSections.push({ id: d.id, ...d.data() });
     });
+    if(siteData.customSections.length === 0 && mainCustomSections.length > 0){
+      siteData.customSections = mainCustomSections.map((item, index) => ({
+        id: item.id || `mainConfig-section-${index}`,
+        ...item
+      }));
+    }
 
     const reviewsCol = collection(window.db, "reviews");
     const reviewsSnap = await getDocs(reviewsCol);
@@ -696,13 +724,44 @@ function startRealtimeSync(){
   }, "servicios");
 
   // Carrusel + galería.
+  // Soporta tanto la colección gallery como tu estructura existente
+  // settings/mainConfig.gallery + settings/mainConfig.heroImages.
   listen(collection(window.db, "gallery"), snap => {
     const items = snap.docs.map(d => ({ id:d.id, ...d.data() }));
-    siteData.heroImages = items.filter(item => item.type === 'hero').map(item => item.src);
-    siteData.gallery = items.filter(item => item.type !== 'hero');
-    renderCarousel();
-    renderGallery();
+    if(items.length > 0){
+      siteData.heroImages = items.filter(item => item.type === 'hero').map(item => item.src);
+      siteData.gallery = items.filter(item => item.type !== 'hero');
+      renderCarousel();
+      renderGallery();
+    }
   }, "galería");
+
+  listen(doc(window.db, "settings", "mainConfig"), snap => {
+    if(!snap.exists()) return;
+    const data = snap.data() || {};
+    const mainGallery = Array.isArray(data.gallery) ? data.gallery : [];
+    const mainHeroImages = Array.isArray(data.heroImages) ? data.heroImages : [];
+
+    // Si mainConfig contiene imágenes, tienen prioridad para mostrar
+    // exactamente lo que ya existe en tu base de datos.
+    if(mainGallery.length > 0 || mainHeroImages.length > 0){
+      siteData.heroImages = mainHeroImages;
+      siteData.gallery = mainGallery.map((item, index) => ({
+        id: item.id || `mainConfig-gallery-${index}`,
+        ...item
+      }));
+      renderCarousel();
+      renderGallery();
+    }
+
+    if(Array.isArray(data.customSections) && data.customSections.length > 0){
+      siteData.customSections = data.customSections.map((item, index) => ({
+        id: item.id || `mainConfig-section-${index}`,
+        ...item
+      }));
+      renderCustomSections();
+    }
+  }, "settings/mainConfig");
 
   // Secciones personalizadas.
   listen(collection(window.db, "customSections"), snap => {
