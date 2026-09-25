@@ -23,16 +23,14 @@ img{max-width:100%; display:block;}
 .wrap{max-width:1180px; margin:0 auto; padding:0 32px;}
 .hidden{display:none !important;}
 
-/* CORRECCIÓN VISIBILIDAD MODO ADMINISTRADOR EN ESCRITORIO */
 body.is-admin .admin-only {display: block !important;}
-body.is-admin div.admin-only {display: grid !important;} /* Por si usa grid */
+body.is-admin div.admin-only {display: grid !important;}
 body.is-admin section.admin-only {display: block !important;}
 
 [contenteditable="true"]{cursor:text;}
 body.is-admin [contenteditable="true"]{border-bottom:1px dashed var(--gold); background:rgba(212,175,55,0.08);}
 body.is-admin [contenteditable="true"]:focus{outline:2px solid var(--gold); background:#262626;}
 
-/* NAV & HAMBURGER */
 header.nav{position:fixed; top:0; left:0; right:0; z-index:100; background:rgba(18,18,18,0.92); backdrop-filter:blur(12px); border-bottom:1px solid var(--line);}
 .nav-inner{display:flex; align-items:center; justify-content:space-between; padding:16px 32px; max-width:1180px; margin:0 auto; gap:20px;}
 .brand{font-family:Georgia, serif; font-size:1.35rem; letter-spacing:.02em;}
@@ -46,7 +44,6 @@ header.nav{position:fixed; top:0; left:0; right:0; z-index:100; background:rgba(
 .admin-btn{border:1px solid var(--line); background:none; color:var(--ink-dim); padding:8px 14px; font-size:.78rem; border-radius:4px; cursor:pointer; transition:all .3s;}
 .admin-btn.active{background:var(--gold); color:var(--bg); border-color:var(--gold);}
 
-/* USER PILL & PROFILE MODAL */
 .user-pill{background:rgba(212,175,55,0.1); border:1px solid var(--gold); color:var(--gold); padding:6px 14px; font-size:0.8rem; border-radius:20px; display:flex; align-items:center; gap:8px; cursor:pointer; transition:background .3s;}
 .user-pill:hover{background:rgba(212,175,55,0.2);}
 
@@ -59,12 +56,10 @@ header.nav{position:fixed; top:0; left:0; right:0; z-index:100; background:rgba(
 .menu-toggle.active span:nth-child(2){opacity:0;}
 .menu-toggle.active span:nth-child(3){transform:rotate(-45deg); top:15px;}
 
-/* BANNER DE BIENVENIDA Y AVISO */
 .welcome-banner{background:var(--bg-soft); border-bottom:1px solid var(--line); padding:16px 0; text-align:center;}
 .welcome-banner h2{font-size:1.25rem; color:#ffffff; font-family:Georgia, serif; margin-bottom:4px;}
 .welcome-banner p{color:#ffffff; font-weight:bold; font-size:0.9rem;}
 
-/* HERO CAROUSEL */
 .hero{position:relative; height:100vh; min-height:560px; overflow:hidden;}
 .slide{position:absolute; inset:0; opacity:0; transition:opacity 1.2s ease, transform 1.2s ease; transform:scale(1.05); pointer-events:none;}
 .slide.active{opacity:1; transform:scale(1); pointer-events:auto;}
@@ -89,14 +84,12 @@ header.nav{position:fixed; top:0; left:0; right:0; z-index:100; background:rgba(
 .slide-arrows button{pointer-events:all; background:rgba(18,18,18,0.6); border:1px solid var(--line); color:var(--ink); width:46px; height:46px; border-radius:50%; cursor:pointer; font-size:1.2rem; transition:all .3s;}
 .slide-arrows button:hover{background:var(--gold); color:var(--bg); border-color:var(--gold);}
 
-/* SECTIONS */
 section{padding:90px 0;}
 .section-head{margin-bottom:46px; max-width:48ch;}
 .section-head .eyebrow{color:var(--gold); font-size:.85rem; letter-spacing:.18em; margin-bottom:14px; text-transform:uppercase;}
 .section-head h2{font-size:clamp(1.9rem,3.4vw,2.9rem);}
 .section-head p{color:var(--ink-dim); margin-top:16px; font-size:1rem; line-height:1.6;}
 
-/* SERVICES */
 .services-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:20px;}
 .service-card{background:var(--card); border:1px solid var(--line); border-radius:8px; padding:36px 28px; transition:all .4s ease; position:relative; overflow:hidden;}
 .service-card::before{content:''; position:absolute; top:0; left:0; width:100%; height:3px; background:var(--gold); opacity:0; transition:opacity .3s;}
@@ -111,7 +104,6 @@ section{padding:90px 0;}
 .add-service-btn{margin-top:20px; background:transparent; border:1px dashed var(--gold); color:var(--gold); padding:12px 24px; border-radius:6px; cursor:pointer; font-size:0.9rem; transition:all .3s;}
 .add-service-btn:hover{background:rgba(212,175,55,0.08);}
 
-/* GALLERY */
 .gallery-filter{display:flex; gap:10px; margin-bottom:28px; flex-wrap:wrap;}
 .filter-btn{padding:9px 18px; border:1px solid var(--line); background:var(--card); color:var(--ink-dim); font-size:.85rem; border-radius:4px; cursor:pointer; transition:all .3s;}
 .filter-btn.active, .filter-btn:hover{background:var(--gold); color:var(--bg); border-color:var(--gold); font-weight:500;}
@@ -130,7 +122,6 @@ section{padding:90px 0;}
 .gallery-item .tag{position:absolute; bottom:12px; left:12px; font-size:.7rem; letter-spacing:.05em; color:var(--bg); background:var(--gold); padding:4px 8px; border-radius:2px; font-weight:500;}
 .gallery-item .del{position:absolute; top:10px; right:10px; background:rgba(122,36,56,0.9); color:#fff; width:30px; height:30px; border:0; cursor:pointer; border-radius:50%; z-index:2; display:flex; align-items:center; justify-content:center;}
 
-/* BOOKING */
 .booking{background:var(--bg-soft); border-top:1px solid var(--line); border-bottom:1px solid var(--line);}
 .booking-grid{display:grid; grid-template-columns:1fr 1.15fr; gap:60px; align-items:start;}
 .booking-info h2{font-size:clamp(1.9rem,3.2vw,2.7rem); margin-bottom:16px;}
@@ -182,7 +173,6 @@ input:focus,select:focus,textarea:focus{border-color:var(--gold); outline:none; 
 .status-declined{border:1px solid var(--line); color:var(--ink-dim); text-decoration:line-through;}
 .appt-empty{padding:26px; color:var(--ink-dim); font-size:.88rem; text-align:center; background:var(--card); border:1px solid var(--line); border-radius:8px;}
 
-/* ESTADISTICAS ADMIN */
 .stats-box{background:var(--card); border:1px solid var(--line); border-radius:8px; padding:24px; margin-bottom:24px;}
 .stats-box h3{color:var(--gold); font-size:1.2rem; margin-bottom:14px;}
 .stats-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:16px;}
@@ -190,7 +180,6 @@ input:focus,select:focus,textarea:focus{border-color:var(--gold); outline:none; 
 .stat-card span{display:block; font-size:0.75rem; color:var(--ink-dim); text-transform:uppercase; margin-bottom:4px;}
 .stat-card strong{font-size:1.3rem; color:var(--gold); font-family:Georgia, serif;}
 
-/* RESEÑAS / TESTIMONIOS */
 .reviews-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:20px; margin-top:30px;}
 .review-card{background:var(--card); border:1px solid var(--line); border-radius:8px; padding:28px; position:relative;}
 .review-stars{color:var(--gold); font-size:1rem; margin-bottom:12px;}
@@ -209,7 +198,6 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
 .modal img{max-width:90%; max-height:85vh; border-radius:8px; box-shadow:0 15px 40px rgba(0,0,0,0.6); border:1px solid var(--line);}
 .modal-close{position:absolute; top:24px; right:24px; color:var(--ink); font-size:2rem; background:none; border:none; cursor:pointer;}
 
-/* MODALES DE CUENTA Y PERFIL CON PESTAÑAS */
 .account-modal{position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:300; display:flex; align-items:center; justify-content:center; padding:20px; opacity:0; pointer-events:none; transition:opacity .3s; backdrop-filter:blur(8px);}
 .account-modal.active{opacity:1; pointer-events:auto;}
 .account-box{background:var(--card); border:1px solid var(--gold); border-radius:12px; padding:36px; width:100%; max-width:440px; box-shadow:0 20px 50px rgba(0,0,0,0.7); position:relative;}
@@ -263,7 +251,6 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
   </div>
 </header>
 
-<!-- BANNER DINÁMICO DE BIENVENIDA Y AVISO -->
 <div class="welcome-banner" id="welcomeBanner" style="display: none; margin-top: 73px;">
   <div class="wrap">
     <h2 id="welcomeUserTitle">¡Bienvenido!</h2>
@@ -389,7 +376,6 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
   </div>
 </section>
 
-<!-- PANEL DE ADMINISTRADOR CON ESTADISTICAS -->
 <section class="admin-only hidden" id="panelCitas" style="background:var(--bg-soft); border-top:1px solid var(--line);">
   <div class="wrap">
     <div class="section-head">
@@ -397,7 +383,6 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
       <h2>Estadísticas de ganancias del estudio</h2>
     </div>
 
-    <!-- CAJAS DE ESTADISTICA MENSUAL -->
     <div class="stats-box">
       <h3>📈 Resumen Financiero por Servicios y Meses (Citas Confirmadas)</h3>
       <div class="stats-grid" id="statsGridContainer"></div>
@@ -424,7 +409,6 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
   </div>
 </section>
 
-<!-- SECCIÓN DE RESEÑAS / TESTIMONIOS -->
 <section id="resenas">
   <div class="wrap">
     <div class="section-head">
@@ -465,72 +449,45 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
   </div>
 </footer>
 
-<!-- MODAL DE IMÁGENES -->
 <div class="modal" id="imageModal" onclick="closeModal()">
   <button class="modal-close">✕</button>
   <img id="modalImg" src="" alt="Vista previa">
 </div>
 
-<!-- MODAL DE AUTENTICACIÓN (REGISTRO E INICIO DE SESIÓN) -->
 <div class="account-modal" id="accountModal">
   <div class="account-box">
     <button class="profile-close" onclick="closeAccountModal()">✕</button>
-    
-    <!-- Pestañas de control -->
     <div class="auth-tabs">
       <button class="auth-tab active" onclick="switchAuthTab('register')">Crear Cuenta</button>
       <button class="auth-tab" onclick="switchAuthTab('login')">Ya tengo cuenta (Iniciar sesión)</button>
     </div>
-
-    <!-- Sección de Registro -->
     <div id="authRegisterSection" class="auth-section active">
       <p style="color:var(--ink-dim); font-size:0.9rem; margin-bottom:20px; line-height:1.5;">Regístrate para llevar control de tus reservas y ver el estado de tus citas.</p>
       <form id="accountForm">
-        <div>
-          <label for="accName">Tu Nombre Completo</label>
-          <input id="accName" required placeholder="Ej. Ana Gómez">
-        </div>
-        <div>
-          <label for="accPhone">Teléfono / WhatsApp</label>
-          <input id="accPhone" type="tel" required placeholder="Ej. 55555555">
-        </div>
-        <div>
-          <label for="accEmail">Correo Electrónico</label>
-          <input id="accEmail" type="email" required placeholder="tucorreo@email.com">
-        </div>
+        <div><label for="accName">Tu Nombre Completo</label><input id="accName" required placeholder="Ej. Ana Gómez"></div>
+        <div><label for="accPhone">Teléfono / WhatsApp</label><input id="accPhone" type="tel" required placeholder="Ej. 55555555"></div>
+        <div><label for="accEmail">Correo Electrónico</label><input id="accEmail" type="email" required placeholder="tucorreo@email.com"></div>
         <button type="submit" class="submit-btn" style="margin-top:6px;">Registrarse y continuar</button>
       </form>
     </div>
-
-    <!-- Sección de Inicio de Sesión -->
     <div id="authLoginSection" class="auth-section">
       <p style="color:var(--ink-dim); font-size:0.9rem; margin-bottom:20px; line-height:1.5;">Ingresa tu correo o teléfono registrado para acceder a tu perfil y citas.</p>
       <form id="loginFormUser">
-        <div>
-          <label for="loginEmailOrPhone">Correo o Teléfono</label>
-          <input id="loginEmailOrPhone" required placeholder="tucorreo@email.com o teléfono">
-        </div>
+        <div><label for="loginEmailOrPhone">Correo o Teléfono</label><input id="loginEmailOrPhone" required placeholder="tucorreo@email.com o teléfono"></div>
         <button type="submit" class="submit-btn" style="margin-top:6px;">Iniciar Sesión</button>
       </form>
     </div>
   </div>
 </div>
 
-<!-- MODAL DE PERFIL / ESTADÍSTICAS DE USUARIO -->
 <div class="account-modal" id="userProfileModal">
   <div class="account-box">
     <button class="profile-close" onclick="closeProfileModal()">✕</button>
     <h3>Mi Perfil de Usuario</h3>
     <p id="profileUserEmail" style="color:var(--gold); margin-bottom:12px;"></p>
     <div class="profile-stats-grid">
-      <div class="profile-stat">
-        <span>Citas Totales</span>
-        <strong id="profileTotalAppts">0</strong>
-      </div>
-      <div class="profile-stat">
-        <span>Citas Confirmadas</span>
-        <strong id="profileConfirmedAppts">0</strong>
-      </div>
+      <div class="profile-stat"><span>Citas Totales</span><strong id="profileTotalAppts">0</strong></div>
+      <div class="profile-stat"><span>Citas Confirmadas</span><strong id="profileConfirmedAppts">0</strong></div>
     </div>
     <p style="font-size:0.85rem; color:var(--ink-dim); line-height:1.5; margin-bottom:20px;">Aquí puedes ver el resumen de tu historial de reservas en el estudio.</p>
     <button class="submit-btn" style="background:var(--wine); color:#fff;" onclick="logoutUser()">Cerrar Sesión</button>
@@ -613,11 +570,11 @@ async function initAppFromCloud(){
     const docSnap = await getDoc(docRef);
     if(docSnap.exists()){
       const cloudData = docSnap.data();
-      if(cloudData.heroImages) siteData.heroImages = cloudData.heroImages;
-      if(cloudData.gallery) siteData.gallery = cloudData.gallery;
-      if(cloudData.services) siteData.services = cloudData.services;
-      if(cloudData.reviews) siteData.reviews = cloudData.reviews;
-      if(cloudData.customSections) siteData.customSections = cloudData.customSections;
+      if(Array.isArray(cloudData.heroImages) && cloudData.heroImages.length > 0) siteData.heroImages = cloudData.heroImages;
+      if(Array.isArray(cloudData.gallery) && cloudData.gallery.length > 0) siteData.gallery = cloudData.gallery;
+      if(Array.isArray(cloudData.services) && cloudData.services.length > 0) siteData.services = cloudData.services;
+      if(Array.isArray(cloudData.reviews)) siteData.reviews = cloudData.reviews;
+      if(Array.isArray(cloudData.customSections)) siteData.customSections = cloudData.customSections;
       if(cloudData.texts) siteData.texts = cloudData.texts;
     } else {
       await setDoc(docRef, siteData);
@@ -1009,17 +966,18 @@ function renderGallery(){
   if(!grid) return;
   grid.innerHTML = '';
   
-  const filtered = currentCategory === 'Todas' ? siteData.gallery : siteData.gallery.filter(item => item.category === currentCategory);
+  const filtered = currentCategory === 'Todas' ? siteData.gallery : siteData.gallery.filter(item => item && item.category === currentCategory);
   if(filtered.length === 0){
     grid.innerHTML = `<div style="grid-column:span 4; padding:20px 0; color:var(--ink-dim);">No hay fotos en la categoría "${currentCategory}".</div>`;
     return;
   }
 
   filtered.forEach((item) => {
+    if(!item || !item.src) return;
     const realIdx = siteData.gallery.indexOf(item);
     const div = document.createElement('div'); div.className = 'gallery-item';
     div.onclick = (e) => { if(!e.target.classList.contains('del')) openModal(item.src); };
-    div.innerHTML = `<img src="${item.src}" alt="${item.category}"><span class="tag">${item.category}</span>${isAdmin ? `<button class="del" onclick="removeImage(${realIdx})">✕</button>` : ''}`;
+    div.innerHTML = `<img src="${item.src}" alt="${item.category || 'Galería'}"><span class="tag">${item.category || 'General'}</span>${isAdmin ? `<button class="del" onclick="removeImage(${realIdx})">✕</button>` : ''}`;
     grid.appendChild(div);
   });
 }
