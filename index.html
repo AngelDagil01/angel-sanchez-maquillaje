@@ -199,13 +199,18 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
 .modal img{max-width:90%; max-height:85vh; border-radius:8px; box-shadow:0 15px 40px rgba(0,0,0,0.6); border:1px solid var(--line);}
 .modal-close{position:absolute; top:24px; right:24px; color:var(--ink); font-size:2rem; background:none; border:none; cursor:pointer;}
 
-/* MODALES DE CUENTA Y PERFIL */
+/* MODALES DE CUENTA Y PERFIL CON PESTAÑAS */
 .account-modal{position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:300; display:flex; align-items:center; justify-content:center; padding:20px; opacity:0; pointer-events:none; transition:opacity .3s; backdrop-filter:blur(8px);}
 .account-modal.active{opacity:1; pointer-events:auto;}
 .account-box{background:var(--card); border:1px solid var(--gold); border-radius:12px; padding:36px; width:100%; max-width:440px; box-shadow:0 20px 50px rgba(0,0,0,0.7); position:relative;}
-.account-box h3{font-size:1.8rem; color:var(--gold); margin-bottom:8px;}
-.account-box p{color:var(--ink-dim); font-size:0.9rem; margin-bottom:24px; line-height:1.5;}
 .profile-close{position:absolute; top:16px; right:20px; background:none; border:none; color:var(--ink-dim); font-size:1.4rem; cursor:pointer;}
+
+.auth-tabs{display:flex; margin-bottom:20px; border-bottom:1px solid var(--line);}
+.auth-tab{flex:1; background:none; border:none; padding:10px; font-size:0.95rem; font-weight:600; color:var(--ink-dim); cursor:pointer; transition:all .3s;}
+.auth-tab.active{color:var(--gold); border-bottom:2px solid var(--gold); margin-bottom:-1px;}
+.auth-section{display:none;}
+.auth-section.active{display:block;}
+
 .profile-stats-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:20px 0;}
 .profile-stat{background:var(--bg); border:1px solid var(--line); padding:14px; border-radius:6px; text-align:center;}
 .profile-stat span{display:block; font-size:0.75rem; color:var(--ink-dim); text-transform:uppercase; margin-bottom:4px;}
@@ -448,26 +453,48 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
   <img id="modalImg" src="" alt="Vista previa">
 </div>
 
-<!-- MODAL DE CREACIÓN DE CUENTA (OBLIGATORIA) -->
+<!-- MODAL DE AUTENTICACIÓN (REGISTRO E INICIO DE SESIÓN) -->
 <div class="account-modal" id="accountModal">
   <div class="account-box">
-    <h3>Crea tu cuenta</h3>
-    <p>Para ver el estado de tus citas, recibir notificaciones en tiempo real cuando sean aceptadas y llevar control de tus reservas, regístrate por favor.</p>
-    <form id="accountForm">
-      <div>
-        <label for="accName">Tu Nombre Completo</label>
-        <input id="accName" required placeholder="Ej. Ana Gómez">
-      </div>
-      <div>
-        <label for="accPhone">Teléfono / WhatsApp</label>
-        <input id="accPhone" type="tel" required placeholder="Ej. 55555555">
-      </div>
-      <div>
-        <label for="accEmail">Correo Electrónico</label>
-        <input id="accEmail" type="email" required placeholder="tucorreo@email.com">
-      </div>
-      <button type="submit" class="submit-btn" style="margin-top:6px;">Crear cuenta y continuar</button>
-    </form>
+    <button class="profile-close" onclick="closeAccountModal()">✕</button>
+    
+    <!-- Pestañas de control -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('register')">Crear Cuenta</button>
+      <button class="auth-tab" onclick="switchAuthTab('login')">Ya tengo cuenta (Iniciar sesión)</button>
+    </div>
+
+    <!-- Sección de Registro -->
+    <div id="authRegisterSection" class="auth-section active">
+      <p style="color:var(--ink-dim); font-size:0.9rem; margin-bottom:20px; line-height:1.5;">Regístrate para llevar control de tus reservas y ver el estado de tus citas.</p>
+      <form id="accountForm">
+        <div>
+          <label for="accName">Tu Nombre Completo</label>
+          <input id="accName" required placeholder="Ej. Ana Gómez">
+        </div>
+        <div>
+          <label for="accPhone">Teléfono / WhatsApp</label>
+          <input id="accPhone" type="tel" required placeholder="Ej. 55555555">
+        </div>
+        <div>
+          <label for="accEmail">Correo Electrónico</label>
+          <input id="accEmail" type="email" required placeholder="tucorreo@email.com">
+        </div>
+        <button type="submit" class="submit-btn" style="margin-top:6px;">Registrarse y continuar</button>
+      </form>
+    </div>
+
+    <!-- Sección de Inicio de Sesión -->
+    <div id="authLoginSection" class="auth-section">
+      <p style="color:var(--ink-dim); font-size:0.9rem; margin-bottom:20px; line-height:1.5;">Ingresa tu correo o teléfono registrado para acceder a tu perfil y citas.</p>
+      <form id="loginFormUser">
+        <div>
+          <label for="loginEmailOrPhone">Correo o Teléfono</label>
+          <input id="loginEmailOrPhone" required placeholder="tucorreo@email.com o teléfono">
+        </div>
+        <button type="submit" class="submit-btn" style="margin-top:6px;">Iniciar Sesión</button>
+      </form>
+    </div>
   </div>
 </div>
 
@@ -494,7 +521,7 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
       apiKey: "AIzaSyArxSYDEJW5nksY807uXWNCUD7_r1d-MY",
@@ -509,7 +536,7 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
   const db = getFirestore(app);
 
   window.db = db;
-  window.firestoreModules = { doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc, deleteDoc };
+  window.firestoreModules = { doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc, deleteDoc, query, where };
 
   if (typeof window.initAppFromCloud === 'function') {
     window.initAppFromCloud();
@@ -521,6 +548,7 @@ const ADMIN_PASSWORD = '2001';
 let isAdmin = sessionStorage.getItem('isAdmin') === '1';
 let currentCategory = 'Todas';
 let currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+let accountPromptDismissed = false;
 
 const defaultHeroImages = [
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="100%" height="100%" fill="%231a1a1a"/><circle cx="600" cy="400" r="220" fill="none" stroke="%23d4af37" stroke-width="2"/><text x="50%" y="80%" font-family="Georgia" font-size="36" fill="%23d4af37" text-anchor="middle">Angel Sanchez — Portada 1</text></svg>',
@@ -616,12 +644,36 @@ function renderAll(){
 
 function checkUserSessionModal(){
   const modal = document.getElementById('accountModal');
-  if(!currentUser){
+  if(!currentUser && !accountPromptDismissed){
     modal.classList.add('active');
   } else {
     modal.classList.remove('active');
-    if(document.getElementById('bName')) document.getElementById('bName').value = currentUser.name || '';
-    if(document.getElementById('bPhone')) document.getElementById('bPhone').value = currentUser.phone || '';
+    if(currentUser){
+      if(document.getElementById('bName')) document.getElementById('bName').value = currentUser.name || '';
+      if(document.getElementById('bPhone')) document.getElementById('bPhone').value = currentUser.phone || '';
+    }
+  }
+}
+
+window.closeAccountModal = function(){
+  accountPromptDismissed = true;
+  document.getElementById('accountModal').classList.remove('active');
+}
+
+window.switchAuthTab = function(tab){
+  const regSec = document.getElementById('authRegisterSection');
+  const logSec = document.getElementById('authLoginSection');
+  const tabs = document.querySelectorAll('.auth-tab');
+  
+  tabs.forEach(t => t.classList.remove('active'));
+  if(tab === 'register'){
+    regSec.classList.add('active');
+    logSec.classList.remove('active');
+    tabs[0].classList.add('active');
+  } else {
+    logSec.classList.add('active');
+    regSec.classList.remove('active');
+    tabs[1].classList.add('active');
   }
 }
 
@@ -648,22 +700,72 @@ document.getElementById('accountForm').addEventListener('submit', async function
   checkUserSessionModal();
 });
 
+// Manejo del formulario de inicio de sesión de usuarios existentes
+document.getElementById('loginFormUser').addEventListener('submit', async function(e){
+  e.preventDefault();
+  const queryVal = document.getElementById('loginEmailOrPhone').value.trim();
+  
+  if(!window.db) {
+    alert('Base de datos no conectada.');
+    return;
+  }
+
+  try {
+    const { collection, getDocs, query, where } = window.firestoreModules;
+    const usersRef = collection(window.db, "users");
+    
+    // Buscar por correo
+    let q = query(usersRef, where("email", "==", queryVal));
+    let querySnapshot = await getDocs(q);
+    
+    let foundUser = null;
+    if(!querySnapshot.empty){
+      foundUser = querySnapshot.docs[0].data();
+    } else {
+      // Buscar por teléfono si no se encontró por correo
+      let qPhone = query(usersRef, where("phone", "==", queryVal));
+      let querySnapPhone = await getDocs(qPhone);
+      if(!querySnapPhone.empty){
+        foundUser = querySnapPhone.docs[0].data();
+      }
+    }
+
+    if(foundUser){
+      currentUser = foundUser;
+      localStorage.setItem('currentUser', JSON.stringify(currentUser));
+      document.getElementById('accountModal').classList.remove('active');
+      renderUserPill();
+      checkUserSessionModal();
+      alert(`¡Bienvenido de nuevo, ${currentUser.name}!`);
+    } else {
+      alert('No se encontró ninguna cuenta con ese correo o teléfono. Por favor, regístrate.');
+    }
+  } catch(err) {
+    console.error("Error al iniciar sesión:", err);
+    alert('Ocurrió un error al verificar tus datos.');
+  }
+});
+
 function renderUserPill(){
   const container = document.getElementById('userAccountSection');
   if(!container) return;
   if(currentUser){
     container.innerHTML = `<div class="user-pill" onclick="openProfileModal()">👤 ${currentUser.name}</div>`;
   } else {
-    container.innerHTML = `<button class="admin-btn" onclick="openAccountModal()">Crear Cuenta</button>`;
+    container.innerHTML = `<button class="admin-btn" onclick="openAccountModal()">Mi Cuenta</button>`;
   }
 }
 
 function openAccountModal(){
+  accountPromptDismissed = false;
   document.getElementById('accountModal').classList.add('active');
 }
 
 function openProfileModal(){
-  if(!currentUser) return;
+  if(!currentUser) {
+    openAccountModal();
+    return;
+  }
   const userAppts = appointmentsData.filter(a => a.userEmail === currentUser.email || a.phone === currentUser.phone);
   const confirmedCount = userAppts.filter(a => a.status === 'confirmed').length;
 
@@ -842,7 +944,6 @@ function renderServices(){
 function updateService(idx, field, value){
   siteData.services[idx][field] = value.trim();
   if(field === 'price'){
-    // Extraer número base aproximado para cálculos de ganancias
     const match = value.match(/\d+/);
     siteData.services[idx].rawPrice = match ? parseInt(match[0]) : 200;
   }
@@ -1054,11 +1155,6 @@ function createCalendarEvent(title, description, date, time) {
 
 document.getElementById('bookingForm').addEventListener('submit', async function(e){
   e.preventDefault();
-  if(!currentUser){
-    openAccountModal();
-    alert('Por favor crea tu cuenta primero para registrar tu cita.');
-    return;
-  }
 
   const name = document.getElementById('bName').value;
   const phone = document.getElementById('bPhone').value;
@@ -1072,7 +1168,7 @@ document.getElementById('bookingForm').addEventListener('submit', async function
     date, 
     time, 
     service, 
-    userEmail: currentUser.email,
+    userEmail: currentUser ? currentUser.email : 'Sin registrar',
     source:'Formulario web', 
     status:'pending', 
     createdAt: new Date().toISOString() 
@@ -1109,7 +1205,7 @@ function renderConfirmed(){
   }
 
   if(displayAppts.length === 0){ 
-    wrap.innerHTML = `<div class="empty-note">${currentUser ? 'Aún no tienes citas registradas. ¡Agenda la tuya arriba!' : 'Inicia sesión para ver tus citas.'}</div>`; 
+    wrap.innerHTML = `<div class="empty-note">${currentUser ? 'Aún no tienes citas registradas. ¡Agenda la tuya arriba!' : 'Visualiza el estado de tus citas o agenda una nueva arriba.'}</div>`; 
     return; 
   }
   
@@ -1136,7 +1232,6 @@ function renderFinancialStats(){
   if(!container) return;
   container.innerHTML = '';
 
-  // Calcular ganancias por mes basadas únicamente en citas confirmadas
   const monthlyEarnings = {};
   const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
@@ -1147,9 +1242,8 @@ function renderFinancialStats(){
       const year = dateObj.getFullYear();
       const monthKey = `${monthNames[monthIndex]} ${year}`;
 
-      // Buscar precio del servicio
       const foundServ = siteData.services.find(s => s.title.toLowerCase() === (a.service || '').toLowerCase());
-      const price = foundServ && foundServ.rawPrice ? foundServ.rawPrice : 250; // Valor por defecto si no coincide
+      const price = foundServ && foundServ.rawPrice ? foundServ.rawPrice : 250;
 
       if(!monthlyEarnings[monthKey]) monthlyEarnings[monthKey] = 0;
       monthlyEarnings[monthKey] += price;
