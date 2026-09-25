@@ -23,6 +23,11 @@ img{max-width:100%; display:block;}
 .wrap{max-width:1180px; margin:0 auto; padding:0 32px;}
 .hidden{display:none !important;}
 
+/* CORRECCIÓN VISIBILIDAD MODO ADMINISTRADOR EN ESCRITORIO */
+body.is-admin .admin-only {display: block !important;}
+body.is-admin div.admin-only {display: grid !important;} /* Por si usa grid */
+body.is-admin section.admin-only {display: block !important;}
+
 [contenteditable="true"]{cursor:text;}
 body.is-admin [contenteditable="true"]{border-bottom:1px dashed var(--gold); background:rgba(212,175,55,0.08);}
 body.is-admin [contenteditable="true"]:focus{outline:2px solid var(--gold); background:#262626;}
@@ -53,6 +58,11 @@ header.nav{position:fixed; top:0; left:0; right:0; z-index:100; background:rgba(
 .menu-toggle.active span:nth-child(1){transform:rotate(45deg); top:15px;}
 .menu-toggle.active span:nth-child(2){opacity:0;}
 .menu-toggle.active span:nth-child(3){transform:rotate(-45deg); top:15px;}
+
+/* BANNER DE BIENVENIDA Y AVISO */
+.welcome-banner{background:var(--bg-soft); border-bottom:1px solid var(--line); padding:16px 0; text-align:center;}
+.welcome-banner h2{font-size:1.25rem; color:#ffffff; font-family:Georgia, serif; margin-bottom:4px;}
+.welcome-banner p{color:#ffffff; font-weight:bold; font-size:0.9rem;}
 
 /* HERO CAROUSEL */
 .hero{position:relative; height:100vh; min-height:560px; overflow:hidden;}
@@ -253,7 +263,15 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
   </div>
 </header>
 
-<section class="hero" id="inicio">
+<!-- BANNER DINÁMICO DE BIENVENIDA Y AVISO -->
+<div class="welcome-banner" id="welcomeBanner" style="display: none; margin-top: 73px;">
+  <div class="wrap">
+    <h2 id="welcomeUserTitle">¡Bienvenido!</h2>
+    <p>Recuerda que en tu perfil puedes verificar si tu cita está aceptada o declinada.</p>
+  </div>
+</div>
+
+<section class="hero" id="inicio" style="margin-top: 0;">
   <div id="heroSlides"></div>
   <div class="hero-shade"></div>
   <div class="hero-content">
@@ -571,7 +589,7 @@ const defaultServices = [
 
 const defaultReviews = [
   {name: 'Carla Mendoza', stars: '★★★★★', comment: '¡Increíble trabajo! El maquillaje de novia duró toda la noche intacto y recibí muchísimos cumplidos.'},
-  {name: 'Lucía Morales', stars: '★★★★★', comment: 'Angel es súper profesional, capta exactamente el estilo que buscas para tu sesión de fotos.'},
+  {name: 'Lucía Morales', stars: '★★★★★', comment: 'Angel is súper profesional, capta exactamente el estilo que buscas para tu sesión de fotos.'},
   {name: 'Sofía Castillo', stars: '★★★★☆', comment: 'Excelente servicio, muy puntual y los productos de gama alta se notan en el acabado.'}
 ];
 
@@ -640,6 +658,7 @@ function renderAll(){
   renderReviews();
   renderAppts();
   renderUserPill();
+  renderWelcomeBanner();
 }
 
 function checkUserSessionModal(){
@@ -697,10 +716,10 @@ document.getElementById('accountForm').addEventListener('submit', async function
 
   document.getElementById('accountModal').classList.remove('active');
   renderUserPill();
+  renderWelcomeBanner();
   checkUserSessionModal();
 });
 
-// Manejo del formulario de inicio de sesión de usuarios existentes
 document.getElementById('loginFormUser').addEventListener('submit', async function(e){
   e.preventDefault();
   const queryVal = document.getElementById('loginEmailOrPhone').value.trim();
@@ -714,7 +733,6 @@ document.getElementById('loginFormUser').addEventListener('submit', async functi
     const { collection, getDocs, query, where } = window.firestoreModules;
     const usersRef = collection(window.db, "users");
     
-    // Buscar por correo
     let q = query(usersRef, where("email", "==", queryVal));
     let querySnapshot = await getDocs(q);
     
@@ -722,7 +740,6 @@ document.getElementById('loginFormUser').addEventListener('submit', async functi
     if(!querySnapshot.empty){
       foundUser = querySnapshot.docs[0].data();
     } else {
-      // Buscar por teléfono si no se encontró por correo
       let qPhone = query(usersRef, where("phone", "==", queryVal));
       let querySnapPhone = await getDocs(qPhone);
       if(!querySnapPhone.empty){
@@ -735,6 +752,7 @@ document.getElementById('loginFormUser').addEventListener('submit', async functi
       localStorage.setItem('currentUser', JSON.stringify(currentUser));
       document.getElementById('accountModal').classList.remove('active');
       renderUserPill();
+      renderWelcomeBanner();
       checkUserSessionModal();
       alert(`¡Bienvenido de nuevo, ${currentUser.name}!`);
     } else {
@@ -753,6 +771,19 @@ function renderUserPill(){
     container.innerHTML = `<div class="user-pill" onclick="openProfileModal()">👤 ${currentUser.name}</div>`;
   } else {
     container.innerHTML = `<button class="admin-btn" onclick="openAccountModal()">Mi Cuenta</button>`;
+  }
+}
+
+function renderWelcomeBanner(){
+  const banner = document.getElementById('welcomeBanner');
+  const titleEl = document.getElementById('welcomeUserTitle');
+  if(!banner || !titleEl) return;
+
+  if(currentUser && currentUser.name){
+    titleEl.textContent = `¡Bienvenido, ${currentUser.name}!`;
+    banner.style.display = 'block';
+  } else {
+    banner.style.display = 'none';
   }
 }
 
@@ -784,6 +815,7 @@ window.logoutUser = function(){
   currentUser = null;
   closeProfileModal();
   renderUserPill();
+  renderWelcomeBanner();
   checkUserSessionModal();
 }
 
