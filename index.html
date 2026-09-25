@@ -585,6 +585,11 @@ async function initAppFromCloud(){
     const mainConfigSnap = await getDoc(mainConfigRef);
     const mainConfig = mainConfigSnap.exists() ? mainConfigSnap.data() : {};
 
+    // Normaliza una sola vez la información antigua de settings/mainConfig
+    // hacia colecciones limpias, con IDs estables y orden explícito.
+    // Esto evita duplicados y evita depender del orden interno de Firestore.
+    await normalizeMainConfigToCollections(mainConfig);
+
     const servicesCol = collection(window.db, "services");
     const servicesSnap = await getDocs(servicesCol);
     siteData.services = [];
@@ -681,6 +686,60 @@ async function initAppFromCloud(){
 }
 window.initAppFromCloud = initAppFromCloud;
 
+// Migra/normaliza los datos existentes de settings/mainConfig una sola vez.
+// No toca appointments ni users. Los documentos reciben IDs estables y un
+// campo order para que siempre se muestren en el mismo orden.
+async function normalizeMainConfigToCollections(mainConfig){
+  if(!window.db || !mainConfig || typeof mainConfig !== 'object') return;
+
+  const { doc, setDoc, getDoc, collection, getDocs, deleteDoc } = window.firestoreModules;
+  const migrationRef = doc(window.db, "settings", "mainConfigMigration");
+  const migrationSnap = await getDoc(migrationRef);
+  if(migrationSnap.exists() && migrationSnap.data()?.version === 1) return;
+
+  const syncArray = async (collectionName, items, mapper) => {
+    if(!Array.isArray(items) || items.length === 0) return;
+    const colRef = collection(window.db, collectionName);
+    const oldSnap = await getDocs(colRef);
+
+    // Limpia únicamente la colección de contenido que se está normalizando.
+    // No elimina citas, usuarios ni archivos de Storage.
+    for(const d of oldSnap.docs){
+      await deleteDoc(d.ref);
+    }
+
+    for(let i = 0; i < items.length; i++){
+      const raw = items[i] || {};
+      const data = mapper(raw, i);
+      await setDoc(doc(window.db, collectionName, `${collectionName}_${String(i + 1).padStart(4,'0')}`), data);
+    }
+  };
+
+  await syncArray('gallery', mainConfig.gallery, (item, i) => ({
+    ...item,
+    type: item.type || 'gallery',
+    order: i + 1
+  }));
+
+  await syncArray('customSections', mainConfig.customSections, (item, i) => ({
+    ...item,
+    order: i + 1
+  }));
+
+  // Si en mainConfig existen estas listas, también quedan normalizadas.
+  await syncArray('services', mainConfig.services, (item, i) => ({
+    ...item,
+    order: i + 1
+  }));
+
+  await syncArray('reviews', mainConfig.reviews, (item, i) => ({
+    ...item,
+    order: i + 1
+  }));
+
+  await setDoc(migrationRef, { version: 1, completedAt: new Date().toISOString() });
+}
+
 // Sincronización en tiempo real con Firestore.
 // Mantiene la interfaz actual y actualiza automáticamente todos los dispositivos
 // cuando el administrador cambia información en Firebase.
@@ -718,7 +777,7 @@ function startRealtimeSync(){
 
   // Servicios y precios.
   listen(collection(window.db, "services"), snap => {
-    siteData.services = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+    siteData.services = snap.docs.map(d => ({ id:d.id, ...d.data() })).sort((a,b) => (a.order ?? 999999) - (b.order ?? 999999));
     renderServices();
     renderFinancialStats();
   }, "servicios");
@@ -730,7 +789,7 @@ function startRealtimeSync(){
     const items = snap.docs.map(d => ({ id:d.id, ...d.data() }));
     if(items.length > 0){
       siteData.heroImages = items.filter(item => item.type === 'hero').map(item => item.src);
-      siteData.gallery = items.filter(item => item.type !== 'hero');
+      siteData.gallery = items.filter(item => item.type !== 'hero').sort((a,b) => (a.order ?? 999999) - (b.order ?? 999999));
       renderCarousel();
       renderGallery();
     }
@@ -765,13 +824,13 @@ function startRealtimeSync(){
 
   // Secciones personalizadas.
   listen(collection(window.db, "customSections"), snap => {
-    siteData.customSections = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+    siteData.customSections = snap.docs.map(d => ({ id:d.id, ...d.data() })).sort((a,b) => (a.order ?? 999999) - (b.order ?? 999999));
     renderCustomSections();
   }, "secciones");
 
   // Reseñas.
   listen(collection(window.db, "reviews"), snap => {
-    siteData.reviews = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+    siteData.reviews = snap.docs.map(d => ({ id:d.id, ...d.data() })).sort((a,b) => (a.order ?? 999999) - (b.order ?? 999999));
     renderReviews();
   }, "reseñas");
 
