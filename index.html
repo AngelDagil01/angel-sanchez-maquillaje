@@ -128,8 +128,8 @@ label{display:block; font-size:.76rem; letter-spacing:.05em; color:var(--ink-dim
 
 input[type="date"], input[type="time"] { color-scheme: dark; }
 
-input,select{width:100%; background:var(--card); border:1px solid var(--line); border-radius:4px; color:var(--ink); padding:13px 14px; font-size:.95rem; transition:border-color .3s;}
-input:focus,select:focus{border-color:var(--gold); outline:none; background:#242424;}
+input,select,textarea{width:100%; background:var(--card); border:1px solid var(--line); border-radius:4px; color:var(--ink); padding:13px 14px; font-size:.95rem; transition:border-color .3s;}
+input:focus,select:focus,textarea:focus{border-color:var(--gold); outline:none; background:#242424;}
 .submit-btn{margin-top:8px; background:var(--gold); color:var(--bg); border:none; padding:15px; font-size:.95rem; font-weight:500; border-radius:4px; cursor:pointer; transition:all .3s;}
 .submit-btn:hover{background:var(--gold-soft); transform:translateY(-2px); box-shadow:0 6px 20px rgba(212,175,55,0.2);}
 .confirm-msg{display:none; margin-top:12px; color:var(--gold); font-size:.85rem; line-height:1.5;}
@@ -167,10 +167,12 @@ input:focus,select:focus{border-color:var(--gold); outline:none; background:#242
 .status-declined{border:1px solid var(--line); color:var(--ink-dim); text-decoration:line-through;}
 .appt-empty{padding:26px; color:var(--ink-dim); font-size:.88rem; text-align:center; background:var(--card); border:1px solid var(--line); border-radius:8px;}
 
+.custom-dynamic-section{border-top:1px solid var(--line); background:var(--bg-soft); position:relative;}
+.delete-section-btn{position:absolute; top:20px; right:20px; background:var(--wine); color:#fff; border:none; padding:8px 14px; border-radius:4px; font-size:0.8rem; cursor:pointer; z-index:10;}
+
 footer{padding:50px 0; border-top:1px solid var(--line); text-align:center;}
 footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
 
-/* LIGHTBOX MODAL */
 .modal{position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:200; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity .3s;}
 .modal.active{opacity:1; pointer-events:auto;}
 .modal img{max-width:90%; max-height:85vh; border-radius:8px; box-shadow:0 15px 40px rgba(0,0,0,0.6); border:1px solid var(--line);}
@@ -250,7 +252,6 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
       <p contenteditable="false" id="editableGalleryDesc" onblur="saveSectionText('galleryDesc', this.textContent)">Filtra por categoría o presiona cualquier imagen para ampliarla a pantalla completa.</p>
     </div>
 
-    <!-- Filtros de Galería -->
     <div class="gallery-filter">
       <button class="filter-btn active" onclick="filterGallery('Todas', this)">Todas</button>
       <button class="filter-btn" onclick="filterGallery('Novias', this)">Novias</button>
@@ -259,16 +260,15 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
       <button class="filter-btn" onclick="filterGallery('Glamour', this)">Glamour</button>
     </div>
 
-    <!-- Panel Admin para Carrusel y Galería con opción de eliminar -->
     <div class="admin-panel admin-only hidden" id="adminPanel">
-      <p><strong>1. Gestión de Carrusel de Portada (Subir o Eliminar):</strong></p>
+      <p><strong>1. Gestión de Carrusel de Portada:</strong></p>
       <div class="upload-controls" style="margin-bottom:12px;">
         <input type="file" id="heroFileInput" accept="image/*" multiple>
       </div>
       <div id="heroManageList" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px;"></div>
 
-      <p><strong>2. Subir imágenes a la Galería seleccionando categoría:</strong></p>
-      <div class="upload-controls">
+      <p><strong>2. Subir imágenes a la Galería:</strong></p>
+      <div class="upload-controls" style="margin-bottom:20px;">
         <label for="categorySelect">Categoría:</label>
         <select id="categorySelect">
           <option value="Novias">Novias</option>
@@ -278,18 +278,26 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
         </select>
         <input type="file" id="fileInput" accept="image/*" multiple>
       </div>
+
+      <p><strong>3. Agregar un Nuevo Apartado/Sección a la Web:</strong></p>
+      <div class="upload-controls">
+        <input type="text" id="newSectionTitleId" placeholder="Título de la nueva sección (ej. Testimonios)" style="max-width:300px;">
+        <button class="submit-btn" style="padding:10px 20px; margin:0;" onclick="addNewCustomSection()">Crear Sección</button>
+      </div>
     </div>
 
     <div class="gallery-grid" id="galleryGrid"></div>
   </div>
 </section>
 
+<div id="dynamicSectionsContainer"></div>
+
 <section class="booking" id="reservas">
   <div class="wrap booking-grid">
     <div class="booking-info">
       <div class="eyebrow">Reservaciones</div>
       <h2 contenteditable="false" id="editableBookingTitle" onblur="saveSectionText('bookingTitle', this.textContent)">Agenda tu cita</h2>
-      <p contenteditable="false" id="editableBookingDesc" onblur="saveSectionText('bookingDesc', this.textContent)">Completa el formulario y tu solicitud se enviará a la base de datos y a WhatsApp con Angel Sanchez (+502 3630 7602). Al reservar, se descargará un archivo para agendar la cita en tu calendario.</p>
+      <p contenteditable="false" id="editableBookingDesc" onblur="saveSectionText('bookingDesc', this.textContent)">Completa el formulario y tu solicitud se enviará de inmediato a WhatsApp con Angel Sanchez (+502 3630 7602). Al reservar, se descargará un archivo para agendar la cita en tu calendario.</p>
       <div class="contact-line">📱 +502 3630 7602</div>
       <div class="contact-line">📍 Guatemala</div>
     </div>
@@ -307,7 +315,7 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
         <select id="bService" required></select>
       </div>
       <button type="submit" class="submit-btn">Reservar por WhatsApp y Agendar</button>
-      <div class="confirm-msg" id="confirmMsg">¡Solicitud registrada en la base de datos! Recordatorio de calendario descargado.</div>
+      <div class="confirm-msg" id="confirmMsg">¡Solicitud registrada con éxito! Recordatorio de calendario descargado.</div>
     </form>
   </div>
 </section>
@@ -317,7 +325,7 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
     <div class="section-head">
       <div class="eyebrow">Agenda activa</div>
       <h2>Próximas citas y estados</h2>
-      <p>Visualiza el detalle de tus citas agendadas y su estado en tiempo real desde la nube.</p>
+      <p>Visualiza el detalle de tus citas agendadas y su estado en tiempo real.</p>
     </div>
     <div id="confirmedWrap"></div>
   </div>
@@ -354,16 +362,14 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
   </div>
 </footer>
 
-<!-- Modal Lightbox para fotos -->
 <div class="modal" id="imageModal" onclick="closeModal()">
   <button class="modal-close">✕</button>
   <img id="modalImg" src="" alt="Vista previa">
 </div>
 
-<!-- SDKs de Firebase Firestore y Lógica General -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
       apiKey: "AIzaSyArxSYDEJW5nksY807uXWNCUD7_r1d-MY",
@@ -378,41 +384,89 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
   const db = getFirestore(app);
 
   window.db = db;
-  window.colRef = collection(db, "appointments");
-  window.appTools = { addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy };
+  window.firestoreModules = { doc, getDoc, setDoc };
 
-  // Cargar citas desde Firestore al iniciar
-  window.fetchAppointmentsFromCloud = async function() {
-    try {
-      const querySnapshot = await getDocs(collection(db, "appointments"));
-      const appts = [];
-      querySnapshot.forEach((docSnap) => {
-        appts.push({ id: docSnap.id, ...docSnap.data() });
-      });
-      window.appointmentsCloud = appts;
-      renderAppts();
-    } catch (e) {
-      console.error("Error al cargar de Firestore: ", e);
-      // Fallback a localStorage si falla la red
-      window.appointmentsCloud = loadJSON('appointments', []);
-      renderAppts();
-    }
-  };
-
-  // Inicializar carga de datos de la nube
-  window.fetchAppointmentsFromCloud();
+  if (typeof window.initAppFromCloud === 'function') {
+    window.initAppFromCloud();
+  }
 </script>
 
 <script>
 const ADMIN_PASSWORD = '2001';
 let isAdmin = sessionStorage.getItem('isAdmin') === '1';
 let currentCategory = 'Todas';
-window.appointmentsCloud = [];
 
-function loadJSON(key, fallback){ try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch(e){ return fallback; } }
-function saveJSON(key, data){ try{ localStorage.setItem(key, JSON.stringify(data)); } catch(e){} }
+const defaultHeroImages = [
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="100%" height="100%" fill="%231a1a1a"/><circle cx="600" cy="400" r="220" fill="none" stroke="%23d4af37" stroke-width="2"/><text x="50%" y="80%" font-family="Georgia" font-size="36" fill="%23d4af37" text-anchor="middle">Angel Sanchez — Portada 1</text></svg>',
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="100%" height="100%" fill="%23222222"/><ellipse cx="600" cy="400" rx="200" ry="260" fill="none" stroke="%23e6c594" stroke-width="2"/><text x="50%" y="80%" font-family="Georgia" font-size="36" fill="%23e6c594" text-anchor="middle">Angel Sanchez — Portada 2</text></svg>'
+];
 
-/* Control del Menú Hamburguesa en Celular */
+const defaultGallery = [
+  {src: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1066"><rect width="100%" height="100%" fill="%231a1a1a"/><text x="50%" y="50%" font-family="Georgia" font-size="32" fill="%23d4af37" text-anchor="middle">Editorial Look</text></svg>', category: 'Editorial'},
+  {src: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1066"><rect width="100%" height="100%" fill="%23222222"/><text x="50%" y="50%" font-family="Georgia" font-size="32" fill="%23e6c594" text-anchor="middle">Maquillaje Novia</text></svg>', category: 'Novias'},
+  {src: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1066"><rect width="100%" height="100%" fill="%231c1c1c"/><text x="50%" y="50%" font-family="Georgia" font-size="32" fill="%23d4af37" text-anchor="middle">Glamour Night</text></svg>', category: 'Glamour'},
+  {src: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1066"><rect width="100%" height="100%" fill="%23262626"/><text x="50%" y="50%" font-family="Georgia" font-size="32" fill="%23e6c594" text-anchor="middle">Evento Social</text></svg>', category: 'Social'}
+];
+
+const defaultServices = [
+  {num:'01', title:'Novias', desc:'Prueba previa incluida, maquillaje de larga duración y retoque.', price:'Desde Q450'},
+  {num:'02', title:'Sesión fotográfica', desc:'Maquillaje editorial adaptado a la luz y concepto.', price:'Desde Q300'},
+  {num:'03', title:'Eventos sociales', desc:'Graduaciones, quince años y fiestas — larga duración.', price:'Desde Q250'},
+  {num:'04', title:'Social express', desc:'Ideal para citas o reuniones rápidas.', price:'Desde Q180'}
+];
+
+let siteData = {
+  heroImages: defaultHeroImages,
+  gallery: defaultGallery,
+  services: defaultServices,
+  customSections: [],
+  texts: {}
+};
+
+async function initAppFromCloud(){
+  if(!window.db) return;
+  try {
+    const { doc, getDoc } = window.firestoreModules;
+    const docRef = doc(window.db, "settings", "mainConfig");
+    const docSnap = await getDoc(docRef);
+    if(docSnap.exists()){
+      const cloudData = docSnap.data();
+      if(cloudData.heroImages) siteData.heroImages = cloudData.heroImages;
+      if(cloudData.gallery) siteData.gallery = cloudData.gallery;
+      if(cloudData.services) siteData.services = cloudData.services;
+      if(cloudData.customSections) siteData.customSections = cloudData.customSections;
+      if(cloudData.texts) siteData.texts = cloudData.texts;
+    } else {
+      const { setDoc } = window.firestoreModules;
+      await setDoc(docRef, siteData);
+    }
+  } catch(e) {
+    console.error("Error al cargar de Firestore:", e);
+  }
+  renderAll();
+}
+window.initAppFromCloud = initAppFromCloud;
+
+async function saveToCloud(){
+  if(!window.db) return;
+  try {
+    const { doc, setDoc } = window.firestoreModules;
+    const docRef = doc(window.db, "settings", "mainConfig");
+    await setDoc(docRef, siteData);
+  } catch(e) {
+    console.error("Error al guardar en Firestore:", e);
+  }
+}
+
+function renderAll(){
+  loadSectionTexts();
+  renderCarousel();
+  renderServices();
+  renderGallery();
+  renderCustomSections();
+  renderAppts();
+}
+
 function toggleMenu(){
   document.getElementById('menuToggle').classList.toggle('active');
   document.getElementById('navLinks').classList.toggle('active');
@@ -422,27 +476,14 @@ function closeMenu(){
   document.getElementById('navLinks').classList.remove('active');
 }
 
-const defaultHeroImages = [
-  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="100%" height="100%" fill="%231a1a1a"/><circle cx="600" cy="400" r="220" fill="none" stroke="%23d4af37" stroke-width="2"/><text x="50%" y="80%" font-family="Georgia" font-size="36" fill="%23d4af37" text-anchor="middle">Angel Sanchez — Portada 1</text></svg>',
-  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="100%" height="100%" fill="%23222222"/><ellipse cx="600" cy="400" rx="200" ry="260" fill="none" stroke="%23e6c594" stroke-width="2"/><text x="50%" y="80%" font-family="Georgia" font-size="36" fill="%23e6c594" text-anchor="middle">Angel Sanchez — Portada 2</text></svg>'
-];
-let heroImages = loadJSON('heroImages', defaultHeroImages);
-
-const defaultGallery = [
-  {src: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1066"><rect width="100%" height="100%" fill="%231a1a1a"/><text x="50%" y="50%" font-family="Georgia" font-size="32" fill="%23d4af37" text-anchor="middle">Editorial Look</text></svg>', category: 'Editorial'},
-  {src: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1066"><rect width="100%" height="100%" fill="%23222222"/><text x="50%" y="50%" font-family="Georgia" font-size="32" fill="%23e6c594" text-anchor="middle">Maquillaje Novia</text></svg>', category: 'Novias'},
-  {src: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1066"><rect width="100%" height="100%" fill="%231c1c1c"/><text x="50%" y="50%" font-family="Georgia" font-size="32" fill="%23d4af37" text-anchor="middle">Glamour Night</text></svg>', category: 'Glamour'},
-  {src: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1066"><rect width="100%" height="100%" fill="%23262626"/><text x="50%" y="50%" font-family="Georgia" font-size="32" fill="%23e6c594" text-anchor="middle">Evento Social</text></svg>', category: 'Social'}
-];
-let gallery = loadJSON('gallery', defaultGallery);
-
 let current = 0, timer;
 function renderCarousel(){
   const heroSlides = document.getElementById('heroSlides');
   const dotsWrap = document.getElementById('dots');
+  if(!heroSlides || !dotsWrap) return;
   heroSlides.innerHTML = ''; dotsWrap.innerHTML = '';
   
-  heroImages.forEach((src, i) => {
+  siteData.heroImages.forEach((src, i) => {
     const slide = document.createElement('div');
     slide.className = `slide ${i===0 ? 'active' : ''}`;
     slide.innerHTML = `<img src="${src}" alt="Slide ${i+1}">`;
@@ -453,7 +494,7 @@ function renderCarousel(){
     d.onclick = () => showSlide(i);
     dotsWrap.appendChild(d);
   });
-  if(current >= heroImages.length) current = 0;
+  if(current >= siteData.heroImages.length) current = 0;
   renderHeroManageList();
 }
 
@@ -461,11 +502,7 @@ function renderHeroManageList(){
   const container = document.getElementById('heroManageList');
   if(!container) return;
   container.innerHTML = '';
-  if(heroImages.length === 0){
-    container.innerHTML = '<span style="font-size:0.85rem; color:var(--ink-dim);">No hay imágenes en el carrusel.</span>';
-    return;
-  }
-  heroImages.forEach((src, idx) => {
+  siteData.heroImages.forEach((src, idx) => {
     const thumb = document.createElement('div');
     thumb.style.cssText = 'position:relative; width:60px; height:60px; border-radius:4px; overflow:hidden; border:1px solid var(--line);';
     thumb.innerHTML = `<img src="${src}" style="width:100%; height:100%; object-fit:cover;"><button onclick="removeHeroImage(${idx})" style="position:absolute; top:2px; right:2px; background:var(--wine); color:#fff; border:none; width:18px; height:18px; font-size:10px; cursor:pointer; border-radius:50%;">✕</button>`;
@@ -474,8 +511,8 @@ function renderHeroManageList(){
 }
 
 function removeHeroImage(idx){
-  heroImages.splice(idx, 1);
-  saveJSON('heroImages', heroImages);
+  siteData.heroImages.splice(idx, 1);
+  saveToCloud();
   renderCarousel();
 }
 
@@ -524,54 +561,38 @@ function applyAdminUI(){
   renderServices();
   renderGallery();
   renderCarousel();
-  renderAppts();
+  renderCustomSections();
 }
 
 function saveSectionText(key, text){
-  saveJSON('sec_' + key, text.trim());
+  siteData.texts[key] = text.trim();
+  saveToCloud();
 }
 
 function loadSectionTexts(){
-  const texts = {
-    heroTitle: loadJSON('sec_heroTitle', null),
-    heroDesc: loadJSON('sec_heroDesc', null),
-    servicesTitle: loadJSON('sec_servicesTitle', null),
-    servicesDesc: loadJSON('sec_servicesDesc', null),
-    galleryTitle: loadJSON('sec_galleryTitle', null),
-    galleryDesc: loadJSON('sec_galleryDesc', null),
-    bookingTitle: loadJSON('sec_bookingTitle', null),
-    bookingDesc: loadJSON('sec_bookingDesc', null),
-  };
-  if(texts.heroTitle) document.getElementById('editableHeroTitle').innerHTML = texts.heroTitle;
-  if(texts.heroDesc) document.getElementById('editableHeroDesc').textContent = texts.heroDesc;
-  if(texts.servicesTitle) document.getElementById('editableServicesTitle').textContent = texts.servicesTitle;
-  if(texts.servicesDesc) document.getElementById('editableServicesDesc').textContent = texts.servicesDesc;
-  if(texts.galleryTitle) document.getElementById('editableGalleryTitle').textContent = texts.galleryTitle;
-  if(texts.galleryDesc) document.getElementById('editableGalleryDesc').textContent = texts.galleryDesc;
-  if(texts.bookingTitle) document.getElementById('editableBookingTitle').textContent = texts.bookingTitle;
-  if(texts.bookingDesc) document.getElementById('editableBookingDesc').textContent = texts.bookingDesc;
+  const t = siteData.texts;
+  if(t.heroTitle && document.getElementById('editableHeroTitle')) document.getElementById('editableHeroTitle').innerHTML = t.heroTitle;
+  if(t.heroDesc && document.getElementById('editableHeroDesc')) document.getElementById('editableHeroDesc').textContent = t.heroDesc;
+  if(t.servicesTitle && document.getElementById('editableServicesTitle')) document.getElementById('editableServicesTitle').textContent = t.servicesTitle;
+  if(t.servicesDesc && document.getElementById('editableServicesDesc')) document.getElementById('editableServicesDesc').textContent = t.servicesDesc;
+  if(t.galleryTitle && document.getElementById('editableGalleryTitle')) document.getElementById('editableGalleryTitle').textContent = t.galleryTitle;
+  if(t.galleryDesc && document.getElementById('editableGalleryDesc')) document.getElementById('editableGalleryDesc').textContent = t.galleryDesc;
+  if(t.bookingTitle && document.getElementById('editableBookingTitle')) document.getElementById('editableBookingTitle').textContent = t.bookingTitle;
+  if(t.bookingDesc && document.getElementById('editableBookingDesc')) document.getElementById('editableBookingDesc').textContent = t.bookingDesc;
 }
-
-const defaultServices = [
-  {num:'01', title:'Novias', desc:'Prueba previa incluida, maquillaje de larga duración y retoque.', price:'Desde Q450'},
-  {num:'02', title:'Sesión fotográfica', desc:'Maquillaje editorial adaptado a la luz y concepto.', price:'Desde Q300'},
-  {num:'03', title:'Eventos sociales', desc:'Graduaciones, quince años y fiestas — larga duración.', price:'Desde Q250'},
-  {num:'04', title:'Social express', desc:'Ideal para citas o reuniones rápidas.', price:'Desde Q180'}
-];
-let services = loadJSON('services', defaultServices);
 
 function renderServices(){
   const grid = document.getElementById('servicesGrid');
   const sel = document.getElementById('bService');
   const addBtnContainer = document.getElementById('addServiceContainer');
+  if(!grid || !sel) return;
   
   grid.innerHTML = ''; sel.innerHTML = '<option value="">Selecciona un servicio</option>';
-  addBtnContainer.innerHTML = '';
+  if(addBtnContainer) addBtnContainer.innerHTML = '';
   
-  services.forEach((s, idx) => {
+  siteData.services.forEach((s, idx) => {
     const card = document.createElement('div');
     card.className = 'service-card';
-    
     let deleteBtnHtml = isAdmin ? `<button class="service-del" onclick="removeService(${idx})" title="Eliminar servicio">✕</button>` : '';
 
     card.innerHTML = `
@@ -587,31 +608,31 @@ function renderServices(){
     const opt = document.createElement('option'); opt.textContent = s.title; sel.appendChild(opt);
   });
 
-  if(isAdmin){
+  if(isAdmin && addBtnContainer){
     addBtnContainer.innerHTML = `<button class="add-service-btn" onclick="addNewService()">+ Agregar Nuevo Servicio</button>`;
   }
 }
 
 function updateService(idx, field, value){
-  services[idx][field] = value.trim();
-  saveJSON('services', services);
+  siteData.services[idx][field] = value.trim();
+  saveToCloud();
   if(field === 'title'){
     const sel = document.getElementById('bService');
-    if(sel.options[idx+1]) sel.options[idx+1].textContent = value.trim();
+    if(sel && sel.options[idx+1]) sel.options[idx+1].textContent = value.trim();
   }
 }
 
 function addNewService(){
-  const newNum = '0' + (services.length + 1);
-  services.push({num: newNum, title: 'Nuevo Servicio', desc: 'Descripción del servicio aquí...', price: 'Desde Q200'});
-  saveJSON('services', services);
+  const newNum = '0' + (siteData.services.length + 1);
+  siteData.services.push({num: newNum, title: 'Nuevo Servicio', desc: 'Descripción del servicio aquí...', price: 'Desde Q200'});
+  saveToCloud();
   renderServices();
 }
 
 function removeService(idx){
-  services.splice(idx, 1);
-  services.forEach((s, i) => { s.num = '0' + (i + 1); });
-  saveJSON('services', services);
+  siteData.services.splice(idx, 1);
+  siteData.services.forEach((s, i) => { s.num = '0' + (i + 1); });
+  saveToCloud();
   renderServices();
 }
 
@@ -624,17 +645,17 @@ function filterGallery(category, btn){
 
 function renderGallery(){
   const grid = document.getElementById('galleryGrid');
+  if(!grid) return;
   grid.innerHTML = '';
   
-  const filtered = currentCategory === 'Todas' ? gallery : gallery.filter(item => item.category === currentCategory);
-
+  const filtered = currentCategory === 'Todas' ? siteData.gallery : siteData.gallery.filter(item => item.category === currentCategory);
   if(filtered.length === 0){
     grid.innerHTML = `<div style="grid-column:span 4; padding:20px 0; color:var(--ink-dim);">No hay fotos en la categoría "${currentCategory}".</div>`;
     return;
   }
 
   filtered.forEach((item) => {
-    const realIdx = gallery.indexOf(item);
+    const realIdx = siteData.gallery.indexOf(item);
     const div = document.createElement('div'); div.className = 'gallery-item';
     div.onclick = (e) => { if(!e.target.classList.contains('del')) openModal(item.src); };
     div.innerHTML = `<img src="${item.src}" alt="${item.category}"><span class="tag">${item.category}</span>${isAdmin ? `<button class="del" onclick="removeImage(${realIdx})">✕</button>` : ''}`;
@@ -643,36 +664,103 @@ function renderGallery(){
 }
 
 function removeImage(idx){
-  gallery.splice(idx,1);
-  saveJSON('gallery', gallery);
+  siteData.gallery.splice(idx,1);
+  saveToCloud();
   renderGallery();
 }
 
-document.getElementById('heroFileInput').addEventListener('change', function(e){
-  Array.from(e.target.files).forEach(file => {
-    const reader = new FileReader();
-    reader.onload = ev => {
-      heroImages.unshift(ev.target.result);
-      saveJSON('heroImages', heroImages);
-      renderCarousel();
-    };
-    reader.readAsDataURL(file);
+function addNewCustomSection(){
+  const titleInput = document.getElementById('newSectionTitleId');
+  const title = titleInput.value.trim();
+  if(!title){ alert('Escribe un título para la sección.'); return; }
+  
+  if(!siteData.customSections) siteData.customSections = [];
+  siteData.customSections.push({
+    title: title,
+    content: 'Escribe aquí el contenido o descripción de esta nueva sección personalizada...'
   });
-  e.target.value = '';
-});
+  titleInput.value = '';
+  saveToCloud();
+  renderCustomSections();
+}
 
-document.getElementById('fileInput').addEventListener('change', function(e){
-  const cat = document.getElementById('categorySelect').value;
-  Array.from(e.target.files).forEach(file => {
-    const reader = new FileReader();
-    reader.onload = ev => {
-      gallery.unshift({src: ev.target.result, category: cat});
-      saveJSON('gallery', gallery);
-      renderGallery();
-    };
-    reader.readAsDataURL(file);
+function updateCustomSectionContent(idx, newText){
+  if(siteData.customSections && siteData.customSections[idx]){
+    siteData.customSections[idx].content = newText.trim();
+    saveToCloud();
+  }
+}
+
+function removeCustomSection(idx){
+  if(confirm('¿Estás seguro de eliminar este apartado?')){
+    siteData.customSections.splice(idx, 1);
+    saveToCloud();
+    renderCustomSections();
+  }
+}
+
+function renderCustomSections(){
+  const container = document.getElementById('dynamicSectionsContainer');
+  if(!container) return;
+  container.innerHTML = '';
+  
+  if(!siteData.customSections || siteData.customSections.length === 0) return;
+
+  siteData.customSections.forEach((sec, idx) => {
+    const sectionEl = document.createElement('section');
+    sectionEl.className = 'custom-dynamic-section';
+    
+    let deleteBtn = isAdmin ? `<button class="delete-section-btn" onclick="removeCustomSection(${idx})">Eliminar apartado</button>` : '';
+
+    sectionEl.innerHTML = `
+      ${deleteBtn}
+      <div class="wrap">
+        <div class="section-head">
+          <div class="eyebrow">Apartado personalizado</div>
+          <h2>${sec.title}</h2>
+        </div>
+        <p ${isAdmin ? 'contenteditable="true"' : ''} onblur="updateCustomSectionContent(${idx}, this.textContent)" style="color:var(--ink-dim); font-size:1.05rem; line-height:1.7; max-width:800px;">
+          ${sec.content}
+        </p>
+      </div>
+    `;
+    container.appendChild(sectionEl);
   });
-  e.target.value = '';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const heroFileIn = document.getElementById('heroFileInput');
+  if(heroFileIn){
+    heroFileIn.addEventListener('change', function(e){
+      Array.from(e.target.files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = ev => {
+          siteData.heroImages.unshift(ev.target.result);
+          saveToCloud();
+          renderCarousel();
+        };
+        reader.readAsDataURL(file);
+      });
+      e.target.value = '';
+    });
+  }
+
+  const fileIn = document.getElementById('fileInput');
+  if(fileIn){
+    fileIn.addEventListener('change', function(e){
+      const cat = document.getElementById('categorySelect').value;
+      Array.from(e.target.files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = ev => {
+          siteData.gallery.unshift({src: ev.target.result, category: cat});
+          saveToCloud();
+          renderGallery();
+        };
+        reader.readAsDataURL(file);
+      });
+      e.target.value = '';
+    });
+  }
 });
 
 function openModal(src){
@@ -689,20 +777,11 @@ function createCalendarEvent(title, description, date, time) {
   const formatDateICS = (d) => d.toISOString().replace(/-|:|\.\d+/g, '');
   
   const icsData = [
-    'BEGIN:VCALENDAR',
-    'VERSION:2.0',
-    'BEGIN:VEVENT',
-    `SUMMARY:${title}`,
-    `DESCRIPTION:${description}`,
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT',
+    `SUMMARY:${title}`, `DESCRIPTION:${description}`,
     `DTSTART:${formatDateICS(startDateTime)}`,
     `DTEND:${formatDateICS(endDateTime)}`,
-    'BEGIN:VALARM',
-    'TRIGGER:-PT1H',
-    'DESCRIPTION:Recordatorio de cita',
-    'ACTION:DISPLAY',
-    'END:VALARM',
-    'END:VEVENT',
-    'END:VCALENDAR'
+    'END:VEVENT', 'END:VCALENDAR'
   ].join('\r\n');
 
   const blob = new Blob([icsData], { type: 'text/calendar;charset=utf-8' });
@@ -715,8 +794,7 @@ function createCalendarEvent(title, description, date, time) {
   document.body.removeChild(link);
 }
 
-// Envío del formulario de reservas conectado a Firebase Firestore
-document.getElementById('bookingForm').addEventListener('submit', async function(e){
+document.getElementById('bookingForm').addEventListener('submit', function(e){
   e.preventDefault();
   const name = document.getElementById('bName').value;
   const phone = document.getElementById('bPhone').value;
@@ -724,48 +802,34 @@ document.getElementById('bookingForm').addEventListener('submit', async function
   const time = document.getElementById('bTime').value;
   const service = document.getElementById('bService').value;
 
-  const newAppt = { name, phone, date, time, service, source:'Formulario web', status:'pending' };
-
   try {
-    await window.appTools.addDoc(window.colRef, newAppt);
-    window.fetchAppointmentsFromCloud();
-  } catch (err) {
-    console.error("Error al guardar en Firestore:", err);
-    // Respaldo local si ocurre algún problema con la red
-    const appts = loadJSON('appointments', []);
-    appts.unshift(newAppt);
-    saveJSON('appointments', appts);
-    renderAppts();
-  }
+    const appts = JSON.parse(localStorage.getItem('appointments') || '[]');
+    appts.unshift({ name, phone, date, time, service, source:'Formulario web', status:'pending' });
+    localStorage.setItem('appointments', JSON.stringify(appts));
+  } catch(err){}
+  renderAppts();
 
   const msg = `Hola Angel, quiero reservar una cita:\n\nNombre: ${name}\nTeléfono: ${phone}\nFecha: ${date}\nHora: ${time}\nServicio: ${service}`;
   window.open(`https://api.whatsapp.com/send?phone=50236307602&text=${encodeURIComponent(msg)}`, '_blank');
-
-  createCalendarEvent(`Cita de Maquillaje - ${service}`, `Cita confirmada con Angel Sanchez. Tel: +502 3630 7602`, date, time);
+  createCalendarEvent(`Cita de Maquillaje - ${service}`, `Cita confirmada con Angel Sanchez.`, date, time);
 
   const confirmMsg = document.getElementById('confirmMsg');
   confirmMsg.style.display = 'block';
-  confirmMsg.innerHTML = '¡Solicitud guardada en la base de datos! Recordatorio descargado.';
+  confirmMsg.innerHTML = '¡Solicitud registrada! Recordatorio descargado.';
   this.reset();
 });
 
 function renderConfirmed(){
   const wrap = document.getElementById('confirmedWrap');
-  const appts = window.appointmentsCloud || [];
-  if(appts.length === 0){ wrap.innerHTML = '<div class="empty-note">Aún no hay citas registradas en la agenda de la nube.</div>'; return; }
+  if(!wrap) return;
+  let appts = [];
+  try { appts = JSON.parse(localStorage.getItem('appointments') || '[]'); } catch(e){}
+  if(appts.length === 0){ wrap.innerHTML = '<div class="empty-note">Aún no hay citas registradas en la agenda.</div>'; return; }
   
   const container = document.createElement('div');
   appts.forEach(a => {
     const card = document.createElement('div'); card.className = 'client-agenda-card';
-    
-    let statusBadge = '';
-    if(a.status === 'confirmed'){
-      statusBadge = '<span class="status-animated-badge confirmed">Confirmada</span>';
-    } else if(a.status === 'declined'){
-      statusBadge = '<span class="status-animated-badge" style="border:1px solid var(--line); color:var(--ink-dim); text-decoration:line-through;">Declinada</span>';
-    } else {
-      statusBadge = '<span class="status-animated-badge pending">En espera / En proceso</span>';
-    }
+    let statusBadge = a.status === 'confirmed' ? '<span class="status-animated-badge confirmed">Confirmada</span>' : a.status === 'declined' ? '<span class="status-animated-badge" style="border:1px solid var(--line); color:var(--ink-dim); text-decoration:line-through;">Declinada</span>' : '<span class="status-animated-badge pending">En espera</span>';
 
     card.innerHTML = `
       <div class="client-agenda-info">
@@ -782,75 +846,84 @@ function renderConfirmed(){
 
 function renderAppts(){
   const wrap = document.getElementById('apptList');
-  if(!wrap) return;
-  const appts = window.appointmentsCloud || [];
-  wrap.innerHTML = '';
-  if(appts.length === 0){ wrap.innerHTML = '<div class="appt-empty">Aún no hay citas registradas.</div>'; renderConfirmed(); return; }
-  
-  appts.forEach((a, idx) => {
-    const row = document.createElement('div'); row.className = 'appt-row';
-    const badge = a.status === 'confirmed' ? '<span class="status-badge status-confirmed">Confirmada</span>' : a.status === 'declined' ? '<span class="status-badge status-declined">Declinada</span>' : '<span class="status-badge status-pending">Pendiente</span>';
-    let actions = `<button class="del" onclick="removeAppt('${a.id}', ${idx})">✕</button>`;
-    if(a.status === 'pending'){ actions = `<button class="accept" onclick="setStatus('${a.id}', 'confirmed')">Aceptar</button><button onclick="setStatus('${a.id}', 'declined')">Declinar</button>` + actions; }
-    row.innerHTML = `<div><strong>${a.name}</strong><span>${a.phone} · ${a.service}</span><span>${a.date||''} ${a.time||''} · ${a.source}</span></div><div style="display:flex;align-items:center;gap:10px;">${badge}<div class="appt-actions">${actions}</div></div>`;
-    wrap.appendChild(row);
-  });
+  let appts = [];
+  try { appts = JSON.parse(localStorage.getItem('appointments') || '[]'); } catch(e){}
+  if(wrap){
+    wrap.innerHTML = '';
+    if(appts.length === 0){ wrap.innerHTML = '<div class="appt-empty">Aún no hay citas registradas.</div>'; renderConfirmed(); return; }
+    appts.forEach((a, idx) => {
+      const row = document.createElement('div'); row.className = 'appt-row';
+      const badge = a.status === 'confirmed' ? '<span class="status-badge status-confirmed">Confirmada</span>' : a.status === 'declined' ? '<span class="status-badge status-declined">Declinada</span>' : '<span class="status-badge status-pending">Pendiente</span>';
+      let actions = `<button class="del" onclick="removeAppt(${idx})">✕</button>`;
+      if(a.status === 'pending'){ actions = `<button class="accept" onclick="setStatus(${idx},'confirmed')">Aceptar</button><button onclick="setStatus(${idx},'declined')">Declinar</button>` + actions; }
+      row.innerHTML = `<div><strong>${a.name}</strong><span>${a.phone} · ${a.service}</span><span>${a.date||''} ${a.time||''} · ${a.source}</span></div><div style="display:flex;align-items:center;gap:10px;">${badge}<div class="appt-actions">${actions}</div></div>`;
+      wrap.appendChild(row);
+    });
+  }
   renderConfirmed();
 }
 
-async function setStatus(id, status){
+function setStatus(idx, status){ 
   try {
-    const docRef = window.appTools.doc(window.db, "appointments", id);
-    await window.appTools.updateDoc(docRef, { status: status });
-    window.fetchAppointmentsFromCloud();
-  } catch(e) {
-    console.error("Error al actualizar estado:", e);
-  }
+    let appts = JSON.parse(localStorage.getItem('appointments') || '[]'); 
+    const currentAppt = appts[idx];
+    currentAppt.status = status; 
+    localStorage.setItem('appointments', JSON.stringify(appts)); 
+    renderAppts();
+
+    // Si se declina la cita, abre automáticamente WhatsApp con un mensaje para el cliente
+    if(status === 'declined' && currentAppt.phone) {
+      const msg = `Hola ${currentAppt.name}, lamentamos informarte que por inconvenientes de agenda y disponibilidad hemos tenido que declinar tu solicitud de cita para el servicio de "${currentAppt.service}" programada para el ${currentAppt.date || 'próximamente'} a las ${currentAppt.time || ''}. Esperamos poder atenderte muy pronto. ¡Disculpa los inconvenientes!`;
+      window.open(`https://api.whatsapp.com/send?phone=502${currentAppt.phone}&text=${encodeURIComponent(msg)}`, '_blank');
+    }
+  } catch(e){} 
 }
 
-async function removeAppt(id, idx){
+function removeAppt(idx){ 
   try {
-    const docRef = window.appTools.doc(window.db, "appointments", id);
-    await window.appTools.deleteDoc(docRef);
-    window.fetchAppointmentsFromCloud();
-  } catch(e) {
-    console.error("Error al eliminar cita:", e);
-  }
+    let appts = JSON.parse(localStorage.getItem('appointments') || '[]'); 
+    const currentAppt = appts[idx];
+    
+    if(currentAppt && currentAppt.phone && confirm('¿Deseas enviar un mensaje de WhatsApp al cliente notificándole la cancelación de su cita?')) {
+      const msg = `Hola ${currentAppt.name}, te escribimos de parte de Angel Sanchez Maquillaje para comunicarte que tu cita para "${currentAppt.service}" del ${currentAppt.date || ''} ha sido cancelada de nuestro sistema. Quedamos a tu disposición para reagendar cuando gustes. ¡Saludos!`;
+      window.open(`https://api.whatsapp.com/send?phone=502${currentAppt.phone}&text=${encodeURIComponent(msg)}`, '_blank');
+    }
+
+    appts.splice(idx, 1); 
+    localStorage.setItem('appointments', JSON.stringify(appts)); 
+    renderAppts();
+  } catch(e){} 
 }
 
-// Registro manual de citas desde el panel de administrador directo a Firestore
-document.getElementById('manualForm').addEventListener('submit', async function(e){
-  e.preventDefault();
-  const date = document.getElementById('mDate').value;
-  const time = document.getElementById('mTime').value;
-  const name = document.getElementById('mName').value;
-  const service = document.getElementById('mService').value;
+const manualForm = document.getElementById('manualForm');
+if(manualForm){
+  manualForm.addEventListener('submit', function(e){
+    e.preventDefault();
+    const date = document.getElementById('mDate').value;
+    const time = document.getElementById('mTime').value;
+    const name = document.getElementById('mName').value;
+    const service = document.getElementById('mService').value;
 
-  const newAppt = {
-    name: name,
-    phone: document.getElementById('mPhone').value,
-    date: date,
-    time: time,
-    service: service,
-    source: 'Registro manual', 
-    status: 'confirmed'
-  };
+    try {
+      let appts = JSON.parse(localStorage.getItem('appointments') || '[]');
+      appts.unshift({
+        name: name,
+        phone: document.getElementById('mPhone').value,
+        date: date,
+        time: time,
+        service: service,
+        source: 'Registro manual', status: 'confirmed'
+      });
+      localStorage.setItem('appointments', JSON.stringify(appts));
+      renderAppts();
+      createCalendarEvent(`Cita de Maquillaje - ${service} (${name})`, `Cita agendada manualmente.`, date, time);
+      this.reset();
+      alert('Cita registrada correctamente.');
+    } catch(err){}
+  });
+}
 
-  try {
-    await window.appTools.addDoc(window.colRef, newAppt);
-    window.fetchAppointmentsFromCloud();
-  } catch(err) {
-    console.error("Error al guardar cita manual en Firestore:", err);
-  }
-
-  createCalendarEvent(`Cita de Maquillaje - ${service} (${name})`, `Cita agendada manualmente.`, date, time);
-  this.reset();
-  alert('Cita registrada correctamente en la base de datos.');
-});
-
-loadSectionTexts();
 applyAdminUI();
-renderCarousel();
 resetTimer();
 </script>
 </body>
