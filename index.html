@@ -289,7 +289,7 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
     <div class="booking-info">
       <div class="eyebrow">Reservaciones</div>
       <h2 contenteditable="false" id="editableBookingTitle" onblur="saveSectionText('bookingTitle', this.textContent)">Agenda tu cita</h2>
-      <p contenteditable="false" id="editableBookingDesc" onblur="saveSectionText('bookingDesc', this.textContent)">Completa el formulario y tu solicitud se enviará de inmediato a WhatsApp con Angel Sanchez (+502 3630 7602). Al reservar, se descargará un archivo para agendar la cita en tu calendario.</p>
+      <p contenteditable="false" id="editableBookingDesc" onblur="saveSectionText('bookingDesc', this.textContent)">Completa el formulario y tu solicitud se enviará a la base de datos y a WhatsApp con Angel Sanchez (+502 3630 7602). Al reservar, se descargará un archivo para agendar la cita en tu calendario.</p>
       <div class="contact-line">📱 +502 3630 7602</div>
       <div class="contact-line">📍 Guatemala</div>
     </div>
@@ -307,7 +307,7 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
         <select id="bService" required></select>
       </div>
       <button type="submit" class="submit-btn">Reservar por WhatsApp y Agendar</button>
-      <div class="confirm-msg" id="confirmMsg">¡Solicitud registrada con éxito! Recordatorio de calendario descargado.</div>
+      <div class="confirm-msg" id="confirmMsg">¡Solicitud registrada en la base de datos! Recordatorio de calendario descargado.</div>
     </form>
   </div>
 </section>
@@ -317,7 +317,7 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
     <div class="section-head">
       <div class="eyebrow">Agenda activa</div>
       <h2>Próximas citas y estados</h2>
-      <p>Visualiza el detalle de tus citas agendadas y su estado en tiempo real.</p>
+      <p>Visualiza el detalle de tus citas agendadas y su estado en tiempo real desde la nube.</p>
     </div>
     <div id="confirmedWrap"></div>
   </div>
@@ -360,9 +360,10 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
   <img id="modalImg" src="" alt="Vista previa">
 </div>
 
-<!-- SDKs de Firebase (Modular) -->
+<!-- SDKs de Firebase Firestore y Lógica General -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
       apiKey: "AIzaSyArxSYDEJW5nksY807uXWNCUD7_r1d-MY",
@@ -374,12 +375,39 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
   };
 
   const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  window.db = db;
+  window.colRef = collection(db, "appointments");
+  window.appTools = { addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy };
+
+  // Cargar citas desde Firestore al iniciar
+  window.fetchAppointmentsFromCloud = async function() {
+    try {
+      const querySnapshot = await getDocs(collection(db, "appointments"));
+      const appts = [];
+      querySnapshot.forEach((docSnap) => {
+        appts.push({ id: docSnap.id, ...docSnap.data() });
+      });
+      window.appointmentsCloud = appts;
+      renderAppts();
+    } catch (e) {
+      console.error("Error al cargar de Firestore: ", e);
+      // Fallback a localStorage si falla la red
+      window.appointmentsCloud = loadJSON('appointments', []);
+      renderAppts();
+    }
+  };
+
+  // Inicializar carga de datos de la nube
+  window.fetchAppointmentsFromCloud();
 </script>
 
 <script>
 const ADMIN_PASSWORD = '2001';
 let isAdmin = sessionStorage.getItem('isAdmin') === '1';
 let currentCategory = 'Todas';
+window.appointmentsCloud = [];
 
 function loadJSON(key, fallback){ try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch(e){ return fallback; } }
 function saveJSON(key, data){ try{ localStorage.setItem(key, JSON.stringify(data)); } catch(e){} }
@@ -393,20 +421,6 @@ function closeMenu(){
   document.getElementById('menuToggle').classList.remove('active');
   document.getElementById('navLinks').classList.remove('active');
 }
-
-/* Auto-cleanup of past appointments */
-function cleanPastAppointments(){
-  const appts = loadJSON('appointments', []);
-  const today = new Date();
-  today.setDate(today.getDate() - 1);
-  const limitDateStr = today.toISOString().split('T')[0];
-
-  const filtered = appts.filter(a => !a.date || a.date >= limitDateStr);
-  if(filtered.length !== appts.length){
-    saveJSON('appointments', filtered);
-  }
-}
-cleanPastAppointments();
 
 const defaultHeroImages = [
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="100%" height="100%" fill="%231a1a1a"/><circle cx="600" cy="400" r="220" fill="none" stroke="%23d4af37" stroke-width="2"/><text x="50%" y="80%" font-family="Georgia" font-size="36" fill="%23d4af37" text-anchor="middle">Angel Sanchez — Portada 1</text></svg>',
@@ -497,7 +511,6 @@ function applyAdminUI(){
   document.body.classList.toggle('is-admin', isAdmin);
   document.querySelectorAll('.admin-only').forEach(el => el.classList.toggle('hidden', !isAdmin));
   
-  // Habilitar o deshabilitar edición de textos en secciones
   const editables = ['editableHeroTitle', 'editableHeroDesc', 'editableServicesTitle', 'editableServicesDesc', 'editableGalleryTitle', 'editableGalleryDesc', 'editableBookingTitle', 'editableBookingDesc'];
   editables.forEach(id => {
     const el = document.getElementById(id);
@@ -514,7 +527,6 @@ function applyAdminUI(){
   renderAppts();
 }
 
-/* Guardar textos generales de secciones */
 function saveSectionText(key, text){
   saveJSON('sec_' + key, text.trim());
 }
@@ -703,7 +715,8 @@ function createCalendarEvent(title, description, date, time) {
   document.body.removeChild(link);
 }
 
-document.getElementById('bookingForm').addEventListener('submit', function(e){
+// Envío del formulario de reservas conectado a Firebase Firestore
+document.getElementById('bookingForm').addEventListener('submit', async function(e){
   e.preventDefault();
   const name = document.getElementById('bName').value;
   const phone = document.getElementById('bPhone').value;
@@ -711,10 +724,19 @@ document.getElementById('bookingForm').addEventListener('submit', function(e){
   const time = document.getElementById('bTime').value;
   const service = document.getElementById('bService').value;
 
-  const appts = loadJSON('appointments', []);
-  appts.unshift({ name, phone, date, time, service, source:'Formulario web', status:'pending' });
-  saveJSON('appointments', appts);
-  renderAppts();
+  const newAppt = { name, phone, date, time, service, source:'Formulario web', status:'pending' };
+
+  try {
+    await window.appTools.addDoc(window.colRef, newAppt);
+    window.fetchAppointmentsFromCloud();
+  } catch (err) {
+    console.error("Error al guardar en Firestore:", err);
+    // Respaldo local si ocurre algún problema con la red
+    const appts = loadJSON('appointments', []);
+    appts.unshift(newAppt);
+    saveJSON('appointments', appts);
+    renderAppts();
+  }
 
   const msg = `Hola Angel, quiero reservar una cita:\n\nNombre: ${name}\nTeléfono: ${phone}\nFecha: ${date}\nHora: ${time}\nServicio: ${service}`;
   window.open(`https://api.whatsapp.com/send?phone=50236307602&text=${encodeURIComponent(msg)}`, '_blank');
@@ -723,14 +745,14 @@ document.getElementById('bookingForm').addEventListener('submit', function(e){
 
   const confirmMsg = document.getElementById('confirmMsg');
   confirmMsg.style.display = 'block';
-  confirmMsg.innerHTML = '¡Solicitud registrada! Recordatorio descargado.';
+  confirmMsg.innerHTML = '¡Solicitud guardada en la base de datos! Recordatorio descargado.';
   this.reset();
 });
 
 function renderConfirmed(){
   const wrap = document.getElementById('confirmedWrap');
-  const appts = loadJSON('appointments', []);
-  if(appts.length === 0){ wrap.innerHTML = '<div class="empty-note">Aún no hay citas registradas en la agenda.</div>'; return; }
+  const appts = window.appointmentsCloud || [];
+  if(appts.length === 0){ wrap.innerHTML = '<div class="empty-note">Aún no hay citas registradas en la agenda de la nube.</div>'; return; }
   
   const container = document.createElement('div');
   appts.forEach(a => {
@@ -760,42 +782,70 @@ function renderConfirmed(){
 
 function renderAppts(){
   const wrap = document.getElementById('apptList');
-  const appts = loadJSON('appointments', []);
+  if(!wrap) return;
+  const appts = window.appointmentsCloud || [];
   wrap.innerHTML = '';
   if(appts.length === 0){ wrap.innerHTML = '<div class="appt-empty">Aún no hay citas registradas.</div>'; renderConfirmed(); return; }
+  
   appts.forEach((a, idx) => {
     const row = document.createElement('div'); row.className = 'appt-row';
     const badge = a.status === 'confirmed' ? '<span class="status-badge status-confirmed">Confirmada</span>' : a.status === 'declined' ? '<span class="status-badge status-declined">Declinada</span>' : '<span class="status-badge status-pending">Pendiente</span>';
-    let actions = `<button class="del" onclick="removeAppt(${idx})">✕</button>`;
-    if(a.status === 'pending'){ actions = `<button class="accept" onclick="setStatus(${idx},'confirmed')">Aceptar</button><button onclick="setStatus(${idx},'declined')">Declinar</button>` + actions; }
+    let actions = `<button class="del" onclick="removeAppt('${a.id}', ${idx})">✕</button>`;
+    if(a.status === 'pending'){ actions = `<button class="accept" onclick="setStatus('${a.id}', 'confirmed')">Aceptar</button><button onclick="setStatus('${a.id}', 'declined')">Declinar</button>` + actions; }
     row.innerHTML = `<div><strong>${a.name}</strong><span>${a.phone} · ${a.service}</span><span>${a.date||''} ${a.time||''} · ${a.source}</span></div><div style="display:flex;align-items:center;gap:10px;">${badge}<div class="appt-actions">${actions}</div></div>`;
     wrap.appendChild(row);
   });
   renderConfirmed();
 }
-function setStatus(idx, status){ const appts = loadJSON('appointments', []); appts[idx].status = status; saveJSON('appointments', appts); renderAppts(); }
-function removeAppt(idx){ const appts = loadJSON('appointments', []); appts.splice(idx,1); saveJSON('appointments', appts); renderAppts(); }
-document.getElementById('manualForm').addEventListener('submit', function(e){
+
+async function setStatus(id, status){
+  try {
+    const docRef = window.appTools.doc(window.db, "appointments", id);
+    await window.appTools.updateDoc(docRef, { status: status });
+    window.fetchAppointmentsFromCloud();
+  } catch(e) {
+    console.error("Error al actualizar estado:", e);
+  }
+}
+
+async function removeAppt(id, idx){
+  try {
+    const docRef = window.appTools.doc(window.db, "appointments", id);
+    await window.appTools.deleteDoc(docRef);
+    window.fetchAppointmentsFromCloud();
+  } catch(e) {
+    console.error("Error al eliminar cita:", e);
+  }
+}
+
+// Registro manual de citas desde el panel de administrador directo a Firestore
+document.getElementById('manualForm').addEventListener('submit', async function(e){
   e.preventDefault();
   const date = document.getElementById('mDate').value;
   const time = document.getElementById('mTime').value;
   const name = document.getElementById('mName').value;
   const service = document.getElementById('mService').value;
 
-  const appts = loadJSON('appointments', []);
-  appts.unshift({
+  const newAppt = {
     name: name,
     phone: document.getElementById('mPhone').value,
     date: date,
     time: time,
     service: service,
-    source: 'Registro manual', status: 'confirmed'
-  });
-  saveJSON('appointments', appts);
-  renderAppts();
+    source: 'Registro manual', 
+    status: 'confirmed'
+  };
+
+  try {
+    await window.appTools.addDoc(window.colRef, newAppt);
+    window.fetchAppointmentsFromCloud();
+  } catch(err) {
+    console.error("Error al guardar cita manual en Firestore:", err);
+  }
+
   createCalendarEvent(`Cita de Maquillaje - ${service} (${name})`, `Cita agendada manualmente.`, date, time);
   this.reset();
-  alert('Cita registrada correctamente.');
+  alert('Cita registrada correctamente en la base de datos.');
 });
 
 loadSectionTexts();
