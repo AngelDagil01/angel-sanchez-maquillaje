@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Angel Sanchez — Maquillista Profesional</title>
+<style>
+:root{
+  --bg:#121212; --bg-soft:#1a1a1a; --card:#1e1e1e;
+  --ink:#fbf8f5; --ink-dim:#b0a8a0;
+  --wine:#7a2438; --wine-deep:#5a1a29;
+  --gold:#d4af37; --gold-soft:#e6c594;
+  --on-wine:#fbf8f5;
+  --line: rgba(212,175,55,0.2);
+  --hero-ink:#fbf8f5; --hero-ink-dim:#d0c8be; --hero-gold:#d4af37;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html{scroll-behavior:smooth; scroll-padding-top:84px;}
+body{background:var(--bg); color:var(--ink); font-family:system-ui, -apple-system, sans-serif; font-weight:300; overflow-x:hidden;}
+h1,h2,h3{font-family:Georgia, serif; font-weight:500; line-height:1.1;}
+a{color:inherit; text-decoration:none;}
+img{max-width:100%; display:block;}
+.wrap{max-width:1180px; margin:0 auto; padding:0 32px;}
+.hidden{display:none !important;}
+
+[contenteditable="true"]{cursor:text;}
+body.is-admin [contenteditable="true"]{border-bottom:1px dashed var(--gold); background:rgba(212,175,55,0.08);}
+body.is-admin [contenteditable="true"]:focus{outline:2px solid var(--gold); background:#262626;}
+
+/* NAV & HAMBURGER */
+header.nav{position:fixed; top:0; left:0; right:0; z-index:100; background:rgba(18,18,18,0.92); backdrop-filter:blur(12px); border-bottom:1px solid var(--line);}
+.nav-inner{display:flex; align-items:center; justify-content:space-between; padding:16px 32px; max-width:1180px; margin:0 auto; gap:20px;}
+.brand{font-family:Georgia, serif; font-size:1.35rem; letter-spacing:.02em;}
+.brand em{font-style:italic; color:var(--gold);}
+.nav-links{display:flex; gap:28px; font-size:.92rem; align-items:center;}
+.nav-links a{color:var(--ink-dim); transition:color .3s;}
+.nav-links a:hover{color:var(--gold);}
+.nav-right{display:flex; align-items:center; gap:12px;}
+.nav-cta{border:1px solid var(--gold); color:var(--gold); padding:8px 18px; font-size:.85rem; border-radius:4px; transition:all .3s;}
+.nav-cta:hover{background:var(--gold); color:var(--bg);}
+.admin-btn{border:1px solid var(--line); background:none; color:var(--ink-dim); padding:8px 14px; font-size:.78rem; border-radius:4px; cursor:pointer; transition:all .3s;}
+.admin-btn.active{background:var(--gold); color:var(--bg); border-color:var(--gold);}
+
+.menu-toggle{display:none; background:none; border:none; cursor:pointer; width:32px; height:32px; position:relative; z-index:102;}
+.menu-toggle span{display:block; width:100%; height:2px; background:var(--gold); position:absolute; transition:all .3s;}
+.menu-toggle span:nth-child(1){top:6px;}
+.menu-toggle span:nth-child(2){top:15px;}
+.menu-toggle span:nth-child(3){top:24px;}
+.menu-toggle.active span:nth-child(1){transform:rotate(45deg); top:15px;}
+.menu-toggle.active span:nth-child(2){opacity:0;}
+.menu-toggle.active span:nth-child(3){transform:rotate(-45deg); top:15px;}
+
+/* HERO CAROUSEL */
+.hero{position:relative; height:100vh; min-height:560px; overflow:hidden;}
+.slide{position:absolute; inset:0; opacity:0; transition:opacity 1.2s ease, transform 1.2s ease; transform:scale(1.05); pointer-events:none;}
+.slide.active{opacity:1; transform:scale(1); pointer-events:auto;}
+.slide img{width:100%; height:100%; object-fit:cover;}
+.hero-shade{position:absolute; inset:0; background:linear-gradient(100deg, rgba(18,18,18,.92) 25%, rgba(18,18,18,.6) 60%, rgba(18,18,18,.3) 100%); pointer-events:none;}
+.hero-content{position:relative; z-index:5; height:100%; display:flex; flex-direction:column; justify-content:center; max-width:1180px; margin:0 auto; padding:0 32px;}
+.hero .eyebrow{color:var(--hero-gold); font-size:.85rem; letter-spacing:.18em; margin-bottom:18px; text-transform:uppercase;}
+.hero h1{font-size:clamp(2.4rem,5.5vw,4.6rem); max-width:12ch; color:var(--hero-ink);}
+.hero h1 i{font-style:italic; color:var(--hero-gold);}
+.hero p{margin-top:22px; max-width:38ch; color:var(--hero-ink-dim); font-size:1.05rem; line-height:1.6;}
+.hero-actions{display:flex; gap:16px; margin-top:36px; flex-wrap:wrap;}
+.btn{display:inline-block; padding:14px 32px; font-size:.9rem; border-radius:4px; transition:all .3s ease; border:1px solid transparent; cursor:pointer;}
+.btn-primary{background:var(--gold); color:var(--bg); font-weight:500;}
+.btn-primary:hover{background:var(--gold-soft); transform:translateY(-2px); box-shadow:0 6px 20px rgba(212,175,55,0.25);}
+.hero .btn-ghost{border-color:rgba(251,248,245,.3); color:var(--hero-ink);}
+.hero .btn-ghost:hover{border-color:var(--gold); color:var(--gold); transform:translateY(-2px); background:rgba(255,255,255,0.03);}
+
+.slide-dots{position:absolute; bottom:38px; left:50%; transform:translateX(-50%); z-index:6; display:flex; gap:10px;}
+.slide-dots button{width:10px; height:10px; border-radius:50%; border:1px solid var(--gold); background:transparent; cursor:pointer; padding:0; transition:transform .3s;}
+.slide-dots button.active{background:var(--gold); transform:scale(1.2);}
+.slide-arrows{position:absolute; z-index:6; top:50%; transform:translateY(-50%); width:100%; display:flex; justify-content:space-between; padding:0 24px; pointer-events:none;}
+.slide-arrows button{pointer-events:all; background:rgba(18,18,18,0.6); border:1px solid var(--line); color:var(--ink); width:46px; height:46px; border-radius:50%; cursor:pointer; font-size:1.2rem; transition:all .3s;}
+.slide-arrows button:hover{background:var(--gold); color:var(--bg); border-color:var(--gold);}
+
+/* SECTIONS */
+section{padding:90px 0;}
+.section-head{margin-bottom:46px; max-width:48ch;}
+.section-head .eyebrow{color:var(--gold); font-size:.85rem; letter-spacing:.18em; margin-bottom:14px; text-transform:uppercase;}
+.section-head h2{font-size:clamp(1.9rem,3.4vw,2.9rem);}
+.section-head p{color:var(--ink-dim); margin-top:16px; font-size:1rem; line-height:1.6;}
+
+/* SERVICES */
+.services-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:20px;}
+.service-card{background:var(--card); border:1px solid var(--line); border-radius:8px; padding:36px 28px; transition:all .4s ease; position:relative; overflow:hidden;}
+.service-card::before{content:''; position:absolute; top:0; left:0; width:100%; height:3px; background:var(--gold); opacity:0; transition:opacity .3s;}
+.service-card:hover{transform:translateY(-6px); box-shadow:0 12px 30px rgba(0,0,0,0.4); border-color:var(--gold);}
+.service-card:hover::before{opacity:1;}
+.service-header-row{display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;}
+.service-num{color:var(--gold); font-size:.8rem; letter-spacing:.1em; display:block;}
+.service-del{background:rgba(122,36,56,0.85); color:#fff; border:none; width:26px; height:26px; border-radius:50%; cursor:pointer; font-size:0.8rem; display:flex; align-items:center; justify-content:center;}
+.service-card h3{font-size:1.4rem; margin-bottom:12px; font-family:Georgia, serif;}
+.service-card p{color:var(--ink-dim); font-size:.9rem; line-height:1.6; margin-bottom:20px;}
+.service-price{color:var(--gold); font-family:Georgia, serif; font-size:1.25rem; font-weight:600;}
+.add-service-btn{margin-top:20px; background:transparent; border:1px dashed var(--gold); color:var(--gold); padding:12px 24px; border-radius:6px; cursor:pointer; font-size:0.9rem; transition:all .3s;}
+.add-service-btn:hover{background:rgba(212,175,55,0.08);}
+
+/* GALLERY */
+.gallery-filter{display:flex; gap:10px; margin-bottom:28px; flex-wrap:wrap;}
+.filter-btn{padding:9px 18px; border:1px solid var(--line); background:var(--card); color:var(--ink-dim); font-size:.85rem; border-radius:4px; cursor:pointer; transition:all .3s;}
+.filter-btn.active, .filter-btn:hover{background:var(--gold); color:var(--bg); border-color:var(--gold); font-weight:500;}
+
+.admin-panel{border:1px dashed var(--gold); border-radius:8px; padding:24px; margin-bottom:30px; background:var(--card);}
+.admin-panel p{color:var(--ink-dim); font-size:.85rem; margin-bottom:12px; line-height:1.5;}
+
+.upload-controls{display:flex; gap:12px; align-items:center; flex-wrap:wrap;}
+.upload-controls select{padding:9px 12px; font-size:.85rem; background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:4px;}
+
+.gallery-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:16px;}
+.gallery-item{position:relative; aspect-ratio:3/4; overflow:hidden; background:var(--card); border-radius:8px; cursor:pointer; border:1px solid var(--line); transition:all .4s ease;}
+.gallery-item:hover{transform:translateY(-6px); box-shadow:0 12px 30px rgba(0,0,0,0.5); border-color:var(--gold);}
+.gallery-item img{width:100%; height:100%; object-fit:cover; transition:transform .6s ease;}
+.gallery-item:hover img{transform:scale(1.08);}
+.gallery-item .tag{position:absolute; bottom:12px; left:12px; font-size:.7rem; letter-spacing:.05em; color:var(--bg); background:var(--gold); padding:4px 8px; border-radius:2px; font-weight:500;}
+.gallery-item .del{position:absolute; top:10px; right:10px; background:rgba(122,36,56,0.9); color:#fff; width:30px; height:30px; border:0; cursor:pointer; border-radius:50%; z-index:2; display:flex; align-items:center; justify-content:center;}
+
+/* BOOKING */
+.booking{background:var(--bg-soft); border-top:1px solid var(--line); border-bottom:1px solid var(--line);}
+.booking-grid{display:grid; grid-template-columns:1fr 1.15fr; gap:60px; align-items:start;}
+.booking-info h2{font-size:clamp(1.9rem,3.2vw,2.7rem); margin-bottom:16px;}
+.booking-info p{color:var(--ink-dim); margin-bottom:24px; line-height:1.6;}
+.contact-line{display:flex; align-items:center; gap:10px; color:var(--gold); font-size:1rem; margin-bottom:10px;}
+form{display:grid; gap:18px;}
+.field-row{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+label{display:block; font-size:.76rem; letter-spacing:.05em; color:var(--ink-dim); margin-bottom:6px; text-transform:uppercase;}
+
+input[type="date"], input[type="time"] { color-scheme: dark; }
+
+input,select{width:100%; background:var(--card); border:1px solid var(--line); border-radius:4px; color:var(--ink); padding:13px 14px; font-size:.95rem; transition:border-color .3s;}
+input:focus,select:focus{border-color:var(--gold); outline:none; background:#242424;}
+.submit-btn{margin-top:8px; background:var(--gold); color:var(--bg); border:none; padding:15px; font-size:.95rem; font-weight:500; border-radius:4px; cursor:pointer; transition:all .3s;}
+.submit-btn:hover{background:var(--gold-soft); transform:translateY(-2px); box-shadow:0 6px 20px rgba(212,175,55,0.2);}
+.confirm-msg{display:none; margin-top:12px; color:var(--gold); font-size:.85rem; line-height:1.5;}
+
+.client-agenda-card{background:var(--card); border:1px solid var(--line); border-radius:8px; padding:22px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;}
+.client-agenda-info h3{font-family:Georgia, serif; font-size:1.2rem; color:var(--gold); margin-bottom:4px;}
+.client-agenda-info p{color:var(--ink-dim); font-size:.88rem; line-height:1.5;}
+.client-agenda-info .details-more{display:block; margin-top:6px; font-size:0.8rem; color:var(--gold-soft);}
+
+.status-animated-badge{display:inline-flex; align-items:center; gap:8px; padding:5px 12px; border-radius:20px; font-size:0.75rem; font-weight:500; letter-spacing:0.05em; text-transform:uppercase;}
+.status-animated-badge.pending{background:rgba(212,175,55,0.1); color:var(--gold); border:1px solid rgba(212,175,55,0.3); animation:pulseGlow 2s infinite;}
+.status-animated-badge.confirmed{background:var(--gold); color:var(--bg); font-weight:600;}
+
+@keyframes pulseGlow{
+  0%{box-shadow:0 0 0 0 rgba(212,175,55,0.4);}
+  70%{box-shadow:0 0 0 8px rgba(212,175,55,0);}
+  100%{box-shadow:0 0 0 0 rgba(212,175,55,0);}
+}
+
+.empty-note{padding:26px; color:var(--ink-dim); font-size:.88rem; background:var(--card); border:1px solid var(--line); border-radius:8px; text-align:center;}
+
+.appt-columns{display:grid; grid-template-columns:.9fr 1.1fr; gap:40px; align-items:start;}
+.manual-form{border:1px solid var(--line); border-radius:8px; padding:28px; display:grid; gap:16px; background:var(--card);}
+.manual-form h3{font-size:1.2rem; color:var(--gold); margin-bottom:2px;}
+.appt-list{display:flex; flex-direction:column; gap:10px; max-height:500px; overflow-y:auto; padding-right:4px;}
+.appt-row{background:var(--card); border:1px solid var(--line); border-radius:8px; padding:16px 20px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;}
+.appt-row div span{display:block; font-size:.76rem; color:var(--ink-dim); margin-top:2px;}
+.appt-row div strong{font-family:Georgia, serif; font-size:1.1rem;}
+.appt-actions{display:flex; gap:8px;}
+.appt-actions button{border:1px solid var(--line); background:var(--bg); padding:6px 12px; font-size:.76rem; border-radius:4px; cursor:pointer; color:var(--ink-dim);}
+.appt-actions .accept{border-color:var(--gold); color:var(--gold); background:rgba(212,175,55,0.05);}
+.status-badge{font-size:.7rem; padding:4px 10px; border-radius:4px; font-weight:500; letter-spacing:.05em;}
+.status-pending{background:rgba(255,255,255,0.06); color:var(--ink-dim);}
+.status-confirmed{background:var(--gold); color:var(--bg);}
+.status-declined{border:1px solid var(--line); color:var(--ink-dim); text-decoration:line-through;}
+.appt-empty{padding:26px; color:var(--ink-dim); font-size:.88rem; text-align:center; background:var(--card); border:1px solid var(--line); border-radius:8px;}
+
+footer{padding:50px 0; border-top:1px solid var(--line); text-align:center;}
+footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
+
+/* LIGHTBOX MODAL */
+.modal{position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:200; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity .3s;}
+.modal.active{opacity:1; pointer-events:auto;}
+.modal img{max-width:90%; max-height:85vh; border-radius:8px; box-shadow:0 15px 40px rgba(0,0,0,0.6); border:1px solid var(--line);}
+.modal-close{position:absolute; top:24px; right:24px; color:var(--ink); font-size:2rem; background:none; border:none; cursor:pointer;}
+
+@media(max-width:900px){
+  .menu-toggle{display:block;}
+  .nav-links{position:absolute; top:100%; left:0; right:0; background:rgba(18,18,18,0.98); border-bottom:1px solid var(--line); flex-direction:column; align-items:center; padding:24px 0; gap:20px; clip-path:circle(0% at top right); transition:clip-path .4s ease-in-out; pointer-events:none;}
+  .nav-links.active{clip-path:circle(150% at top right); pointer-events:auto;}
+  .services-grid,.gallery-grid{grid-template-columns:1fr;}
+  .booking-grid,.appt-columns{grid-template-columns:1fr; gap:40px;}
+  .field-row{grid-template-columns:1fr;}
+  .nav-right .nav-cta{display:none;}
+}
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+    <div class="brand">Angel Sanchez <em>Maquillaje</em></div>
+    <button class="menu-toggle" id="menuToggle" onclick="toggleMenu()">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+    <nav class="nav-links" id="navLinks">
+      <a href="#inicio" onclick="closeMenu()">Inicio</a>
+      <a href="#servicios" onclick="closeMenu()">Servicios</a>
+      <a href="#galeria" onclick="closeMenu()">Galería</a>
+      <a href="#reservas" onclick="closeMenu()">Reservas</a>
+      <a href="#confirmadas" onclick="closeMenu()">Agenda</a>
+    </nav>
+    <div class="nav-right">
+      <button class="admin-btn" id="adminBtn" onclick="toggleAdmin()">Modo administrador</button>
+      <a class="nav-cta" href="#reservas">Reservar cita</a>
+    </div>
+  </div>
+</header>
+
+<section class="hero" id="inicio">
+  <div id="heroSlides"></div>
+  <div class="hero-shade"></div>
+  <div class="hero-content">
+    <div class="eyebrow" contenteditable="false">Maquillaje Profesional · Guatemala</div>
+    <h1 contenteditable="false" id="editableHeroTitle" onblur="saveSectionText('heroTitle', this.textContent)">El arte de realzar tu <i>belleza natural</i></h1>
+    <p contenteditable="false" id="editableHeroDesc" onblur="saveSectionText('heroDesc', this.textContent)">Angel Sanchez, maquillista profesional. Novias, sesiones fotográficas, eventos sociales y editoriales con acabados de alta gama.</p>
+    <div class="hero-actions">
+      <a href="#reservas" class="btn btn-primary">Reservar una cita</a>
+      <a href="#galeria" class="btn btn-ghost">Ver galería</a>
+    </div>
+  </div>
+  <div class="slide-arrows">
+    <button onclick="moveSlide(-1)">‹</button>
+    <button onclick="moveSlide(1)">›</button>
+  </div>
+  <div class="slide-dots" id="dots"></div>
+</section>
+
+<section id="servicios">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Servicios exclusivos</div>
+      <h2 contenteditable="false" id="editableServicesTitle" onblur="saveSectionText('servicesTitle', this.textContent)">Maquillaje para cada ocasión</h2>
+      <p contenteditable="false" id="editableServicesDesc" onblur="saveSectionText('servicesDesc', this.textContent)">Activa el modo administrador para editar títulos, descripciones o precios directamente en pantalla.</p>
+    </div>
+    <div class="services-grid" id="servicesGrid"></div>
+    <div id="addServiceContainer"></div>
+  </div>
+</section>
+
+<section id="galeria">
+  <div class="wrap">
+    <div class="gallery-toolbar section-head" style="margin-bottom:24px;">
+      <div class="eyebrow">Portafolio</div>
+      <h2 contenteditable="false" id="editableGalleryTitle" onblur="saveSectionText('galleryTitle', this.textContent)">Trabajos recientes</h2>
+      <p contenteditable="false" id="editableGalleryDesc" onblur="saveSectionText('galleryDesc', this.textContent)">Filtra por categoría o presiona cualquier imagen para ampliarla a pantalla completa.</p>
+    </div>
+
+    <!-- Filtros de Galería -->
+    <div class="gallery-filter">
+      <button class="filter-btn active" onclick="filterGallery('Todas', this)">Todas</button>
+      <button class="filter-btn" onclick="filterGallery('Novias', this)">Novias</button>
+      <button class="filter-btn" onclick="filterGallery('Social', this)">Social</button>
+      <button class="filter-btn" onclick="filterGallery('Editorial', this)">Editorial</button>
+      <button class="filter-btn" onclick="filterGallery('Glamour', this)">Glamour</button>
+    </div>
+
+    <!-- Panel Admin para Carrusel y Galería con opción de eliminar -->
+    <div class="admin-panel admin-only hidden" id="adminPanel">
+      <p><strong>1. Gestión de Carrusel de Portada (Subir o Eliminar):</strong></p>
+      <div class="upload-controls" style="margin-bottom:12px;">
+        <input type="file" id="heroFileInput" accept="image/*" multiple>
+      </div>
+      <div id="heroManageList" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px;"></div>
+
+      <p><strong>2. Subir imágenes a la Galería seleccionando categoría:</strong></p>
+      <div class="upload-controls">
+        <label for="categorySelect">Categoría:</label>
+        <select id="categorySelect">
+          <option value="Novias">Novias</option>
+          <option value="Social">Social</option>
+          <option value="Editorial">Editorial</option>
+          <option value="Glamour">Glamour</option>
+        </select>
+        <input type="file" id="fileInput" accept="image/*" multiple>
+      </div>
+    </div>
+
+    <div class="gallery-grid" id="galleryGrid"></div>
+  </div>
+</section>
+
+<section class="booking" id="reservas">
+  <div class="wrap booking-grid">
+    <div class="booking-info">
+      <div class="eyebrow">Reservaciones</div>
+      <h2 contenteditable="false" id="editableBookingTitle" onblur="saveSectionText('bookingTitle', this.textContent)">Agenda tu cita</h2>
+      <p contenteditable="false" id="editableBookingDesc" onblur="saveSectionText('bookingDesc', this.textContent)">Completa el formulario y tu solicitud se enviará de inmediato a WhatsApp con Angel Sanchez (+502 3630 7602). Al reservar, se descargará un archivo para agendar la cita en tu calendario.</p>
+      <div class="contact-line">📱 +502 3630 7602</div>
+      <div class="contact-line">📍 Guatemala</div>
+    </div>
+    <form id="bookingForm">
+      <div class="field-row">
+        <div><label for="bName">Nombre completo</label><input id="bName" required placeholder="Tu nombre"></div>
+        <div><label for="bPhone">Teléfono</label><input id="bPhone" type="tel" required placeholder="Ej. 55555555"></div>
+      </div>
+      <div class="field-row">
+        <div><label for="bDate">Fecha deseada</label><input id="bDate" type="date" required></div>
+        <div><label for="bTime">Hora</label><input id="bTime" type="time" required></div>
+      </div>
+      <div>
+        <label for="bService">Tipo de servicio</label>
+        <select id="bService" required></select>
+      </div>
+      <button type="submit" class="submit-btn">Reservar por WhatsApp y Agendar</button>
+      <div class="confirm-msg" id="confirmMsg">¡Solicitud registrada con éxito! Recordatorio de calendario descargado.</div>
+    </form>
+  </div>
+</section>
+
+<section id="confirmadas">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Agenda activa</div>
+      <h2>Próximas citas y estados</h2>
+      <p>Visualiza el detalle de tus citas agendadas y su estado en tiempo real.</p>
+    </div>
+    <div id="confirmedWrap"></div>
+  </div>
+</section>
+
+<section class="admin-only hidden" id="panelCitas" style="background:var(--bg-soft); border-top:1px solid var(--line);">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Panel de control</div>
+      <h2>Gestión de citas del estudio</h2>
+    </div>
+    <div class="appt-columns">
+      <form class="manual-form" id="manualForm">
+        <h3>Registrar cita manual</h3>
+        <p style="color:var(--ink-dim); font-size:0.85rem; margin-bottom:8px;">Ingresa citas recibidas por llamada o WhatsApp.</p>
+        <div><label for="mName">Nombre</label><input id="mName" required></div>
+        <div><label for="mPhone">Teléfono</label><input id="mPhone" required></div>
+        <div class="field-row">
+          <div><label for="mDate">Fecha</label><input id="mDate" type="date" required></div>
+          <div><label for="mTime">Hora</label><input id="mTime" type="time" required></div>
+        </div>
+        <div><label for="mService">Servicio</label><input id="mService" required></div>
+        <button type="submit" class="submit-btn">Guardar cita confirmada</button>
+      </form>
+      <div class="appt-list" id="apptList"></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span class="brand">Angel Sanchez — Maquillista Profesional</span>
+    <p>+502 3630 7602 · Guatemala · © 2026</p>
+  </div>
+</footer>
+
+<!-- Modal Lightbox para fotos -->
+<div class="modal" id="imageModal" onclick="closeModal()">
+  <button class="modal-close">✕</button>
+  <img id="modalImg" src="" alt="Vista previa">
+</div>
+
+<!-- SDKs de Firebase (Modular) -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+
+  const firebaseConfig = {
+      apiKey: "AIzaSyArxSYDEJW5nksY807uXWNCUD7_r1d-MY",
+      authDomain: "angel-sanchez-maquillaje.firebaseapp.com",
+      projectId: "angel-sanchez-maquillaje",
+      storageBucket: "angel-sanchez-maquillajefirebasestorage.app",
+      messagingSenderId: "886361571313",
+      appId: "1:886361571313:web:7f498a8d72101d6c284e50"
+  };
+
+  const app = initializeApp(firebaseConfig);
+</script>
+
+<script>
+const ADMIN_PASSWORD = '2001';
+let isAdmin = sessionStorage.getItem('isAdmin') === '1';
+let currentCategory = 'Todas';
+
+function loadJSON(key, fallback){ try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch(e){ return fallback; } }
+function saveJSON(key, data){ try{ localStorage.setItem(key, JSON.stringify(data)); } catch(e){} }
+
+/* Control del Menú Hamburguesa en Celular */
+function toggleMenu(){
+  document.getElementById('menuToggle').classList.toggle('active');
+  document.getElementById('navLinks').classList.toggle('active');
+}
+function closeMenu(){
+  document.getElementById('menuToggle').classList.remove('active');
+  document.getElementById('navLinks').classList.remove('active');
+}
+
+/* Auto-cleanup of past appointments */
+function cleanPastAppointments(){
+  const appts = loadJSON('appointments', []);
+  const today = new Date();
+  today.setDate(today.getDate() - 1);
+  const limitDateStr = today.toISOString().split('T')[0];
+
+  const filtered = appts.filter(a => !a.date || a.date >= limitDateStr);
+  if(filtered.length !== appts.length){
+    saveJSON('appointments', filtered);
+  }
+}
+cleanPastAppointments();
+
+const defaultHeroImages = [
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="100%" height="100%" fill="%231a1a1a"/><circle cx="600" cy="400" r="220" fill="none" stroke="%23d4af37" stroke-width="2"/><text x="50%" y="80%" font-family="Georgia" font-size="36" fill="%23d4af37" text-anchor="middle">Angel Sanchez — Portada 1</text></svg>',
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="100%" height="100%" fill="%23222222"/><ellipse cx="600" cy="400" rx="200" ry="260" fill="none" stroke="%23e6c594" stroke-width="2"/><text x="50%" y="80%" font-family="Georgia" font-size="36" fill="%23e6c594" text-anchor="middle">Angel Sanchez — Portada 2</text></svg>'
+];
+let heroImages = loadJSON('heroImages', defaultHeroImages);
+
+const defaultGallery = [
+  {src: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1066"><rect width="100%" height="100%" fill="%231a1a1a"/><text x="50%" y="50%" font-family="Georgia" font-size="32" fill="%23d4af37" text-anchor="middle">Editorial Look</text></svg>', category: 'Editorial'},
+  {src: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1066"><rect width="100%" height="100%" fill="%23222222"/><text x="50%" y="50%" font-family="Georgia" font-size="32" fill="%23e6c594" text-anchor="middle">Maquillaje Novia</text></svg>', category: 'Novias'},
+  {src: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1066"><rect width="100%" height="100%" fill="%231c1c1c"/><text x="50%" y="50%" font-family="Georgia" font-size="32" fill="%23d4af37" text-anchor="middle">Glamour Night</text></svg>', category: 'Glamour'},
+  {src: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1066"><rect width="100%" height="100%" fill="%23262626"/><text x="50%" y="50%" font-family="Georgia" font-size="32" fill="%23e6c594" text-anchor="middle">Evento Social</text></svg>', category: 'Social'}
+];
+let gallery = loadJSON('gallery', defaultGallery);
+
+let current = 0, timer;
+function renderCarousel(){
+  const heroSlides = document.getElementById('heroSlides');
+  const dotsWrap = document.getElementById('dots');
+  heroSlides.innerHTML = ''; dotsWrap.innerHTML = '';
+  
+  heroImages.forEach((src, i) => {
+    const slide = document.createElement('div');
+    slide.className = `slide ${i===0 ? 'active' : ''}`;
+    slide.innerHTML = `<img src="${src}" alt="Slide ${i+1}">`;
+    heroSlides.appendChild(slide);
+
+    const d = document.createElement('button');
+    if (i===0) d.classList.add('active');
+    d.onclick = () => showSlide(i);
+    dotsWrap.appendChild(d);
+  });
+  if(current >= heroImages.length) current = 0;
+  renderHeroManageList();
+}
+
+function renderHeroManageList(){
+  const container = document.getElementById('heroManageList');
+  if(!container) return;
+  container.innerHTML = '';
+  if(heroImages.length === 0){
+    container.innerHTML = '<span style="font-size:0.85rem; color:var(--ink-dim);">No hay imágenes en el carrusel.</span>';
+    return;
+  }
+  heroImages.forEach((src, idx) => {
+    const thumb = document.createElement('div');
+    thumb.style.cssText = 'position:relative; width:60px; height:60px; border-radius:4px; overflow:hidden; border:1px solid var(--line);';
+    thumb.innerHTML = `<img src="${src}" style="width:100%; height:100%; object-fit:cover;"><button onclick="removeHeroImage(${idx})" style="position:absolute; top:2px; right:2px; background:var(--wine); color:#fff; border:none; width:18px; height:18px; font-size:10px; cursor:pointer; border-radius:50%;">✕</button>`;
+    container.appendChild(thumb);
+  });
+}
+
+function removeHeroImage(idx){
+  heroImages.splice(idx, 1);
+  saveJSON('heroImages', heroImages);
+  renderCarousel();
+}
+
+function showSlide(i){
+  const slides = document.querySelectorAll('.slide');
+  const dots = document.querySelectorAll('.slide-dots button');
+  if(!slides.length) return;
+  slides[current].classList.remove('active');
+  if(dots[current]) dots[current].classList.remove('active');
+  current = (i + slides.length) % slides.length;
+  slides[current].classList.add('active');
+  if(dots[current]) dots[current].classList.add('active');
+  resetTimer();
+}
+function moveSlide(dir){ showSlide(current + dir); }
+function resetTimer(){ clearInterval(timer); timer = setInterval(() => moveSlide(1), 6000); }
+
+function toggleAdmin(){
+  if(isAdmin){
+    isAdmin = false;
+    sessionStorage.removeItem('isAdmin');
+  } else {
+    const pass = prompt('Contraseña de administrador:');
+    if(pass === null) return;
+    if(pass !== ADMIN_PASSWORD){ alert('Contraseña incorrecta.'); return; }
+    isAdmin = true;
+    sessionStorage.setItem('isAdmin','1');
+  }
+  applyAdminUI();
+}
+
+function applyAdminUI(){
+  document.body.classList.toggle('is-admin', isAdmin);
+  document.querySelectorAll('.admin-only').forEach(el => el.classList.toggle('hidden', !isAdmin));
+  
+  // Habilitar o deshabilitar edición de textos en secciones
+  const editables = ['editableHeroTitle', 'editableHeroDesc', 'editableServicesTitle', 'editableServicesDesc', 'editableGalleryTitle', 'editableGalleryDesc', 'editableBookingTitle', 'editableBookingDesc'];
+  editables.forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.setAttribute('contenteditable', isAdmin ? 'true' : 'false');
+  });
+
+  const btn = document.getElementById('adminBtn');
+  btn.textContent = isAdmin ? 'Salir de administrador' : 'Modo administrador';
+  btn.classList.toggle('active', isAdmin);
+  
+  renderServices();
+  renderGallery();
+  renderCarousel();
+  renderAppts();
+}
+
+/* Guardar textos generales de secciones */
+function saveSectionText(key, text){
+  saveJSON('sec_' + key, text.trim());
+}
+
+function loadSectionTexts(){
+  const texts = {
+    heroTitle: loadJSON('sec_heroTitle', null),
+    heroDesc: loadJSON('sec_heroDesc', null),
+    servicesTitle: loadJSON('sec_servicesTitle', null),
+    servicesDesc: loadJSON('sec_servicesDesc', null),
+    galleryTitle: loadJSON('sec_galleryTitle', null),
+    galleryDesc: loadJSON('sec_galleryDesc', null),
+    bookingTitle: loadJSON('sec_bookingTitle', null),
+    bookingDesc: loadJSON('sec_bookingDesc', null),
+  };
+  if(texts.heroTitle) document.getElementById('editableHeroTitle').innerHTML = texts.heroTitle;
+  if(texts.heroDesc) document.getElementById('editableHeroDesc').textContent = texts.heroDesc;
+  if(texts.servicesTitle) document.getElementById('editableServicesTitle').textContent = texts.servicesTitle;
+  if(texts.servicesDesc) document.getElementById('editableServicesDesc').textContent = texts.servicesDesc;
+  if(texts.galleryTitle) document.getElementById('editableGalleryTitle').textContent = texts.galleryTitle;
+  if(texts.galleryDesc) document.getElementById('editableGalleryDesc').textContent = texts.galleryDesc;
+  if(texts.bookingTitle) document.getElementById('editableBookingTitle').textContent = texts.bookingTitle;
+  if(texts.bookingDesc) document.getElementById('editableBookingDesc').textContent = texts.bookingDesc;
+}
+
+const defaultServices = [
+  {num:'01', title:'Novias', desc:'Prueba previa incluida, maquillaje de larga duración y retoque.', price:'Desde Q450'},
+  {num:'02', title:'Sesión fotográfica', desc:'Maquillaje editorial adaptado a la luz y concepto.', price:'Desde Q300'},
+  {num:'03', title:'Eventos sociales', desc:'Graduaciones, quince años y fiestas — larga duración.', price:'Desde Q250'},
+  {num:'04', title:'Social express', desc:'Ideal para citas o reuniones rápidas.', price:'Desde Q180'}
+];
+let services = loadJSON('services', defaultServices);
+
+function renderServices(){
+  const grid = document.getElementById('servicesGrid');
+  const sel = document.getElementById('bService');
+  const addBtnContainer = document.getElementById('addServiceContainer');
+  
+  grid.innerHTML = ''; sel.innerHTML = '<option value="">Selecciona un servicio</option>';
+  addBtnContainer.innerHTML = '';
+  
+  services.forEach((s, idx) => {
+    const card = document.createElement('div');
+    card.className = 'service-card';
+    
+    let deleteBtnHtml = isAdmin ? `<button class="service-del" onclick="removeService(${idx})" title="Eliminar servicio">✕</button>` : '';
+
+    card.innerHTML = `
+      <div class="service-header-row">
+        <span class="service-num">${s.num || '0' + (idx+1)}</span>
+        ${deleteBtnHtml}
+      </div>
+      <h3 ${isAdmin ? 'contenteditable="true"' : ''} onblur="updateService(${idx}, 'title', this.textContent)">${s.title}</h3>
+      <p ${isAdmin ? 'contenteditable="true"' : ''} onblur="updateService(${idx}, 'desc', this.textContent)">${s.desc}</p>
+      <span class="service-price" ${isAdmin ? 'contenteditable="true"' : ''} onblur="updateService(${idx}, 'price', this.textContent)">${s.price}</span>
+    `;
+    grid.appendChild(card);
+    const opt = document.createElement('option'); opt.textContent = s.title; sel.appendChild(opt);
+  });
+
+  if(isAdmin){
+    addBtnContainer.innerHTML = `<button class="add-service-btn" onclick="addNewService()">+ Agregar Nuevo Servicio</button>`;
+  }
+}
+
+function updateService(idx, field, value){
+  services[idx][field] = value.trim();
+  saveJSON('services', services);
+  if(field === 'title'){
+    const sel = document.getElementById('bService');
+    if(sel.options[idx+1]) sel.options[idx+1].textContent = value.trim();
+  }
+}
+
+function addNewService(){
+  const newNum = '0' + (services.length + 1);
+  services.push({num: newNum, title: 'Nuevo Servicio', desc: 'Descripción del servicio aquí...', price: 'Desde Q200'});
+  saveJSON('services', services);
+  renderServices();
+}
+
+function removeService(idx){
+  services.splice(idx, 1);
+  services.forEach((s, i) => { s.num = '0' + (i + 1); });
+  saveJSON('services', services);
+  renderServices();
+}
+
+function filterGallery(category, btn){
+  currentCategory = category;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  renderGallery();
+}
+
+function renderGallery(){
+  const grid = document.getElementById('galleryGrid');
+  grid.innerHTML = '';
+  
+  const filtered = currentCategory === 'Todas' ? gallery : gallery.filter(item => item.category === currentCategory);
+
+  if(filtered.length === 0){
+    grid.innerHTML = `<div style="grid-column:span 4; padding:20px 0; color:var(--ink-dim);">No hay fotos en la categoría "${currentCategory}".</div>`;
+    return;
+  }
+
+  filtered.forEach((item) => {
+    const realIdx = gallery.indexOf(item);
+    const div = document.createElement('div'); div.className = 'gallery-item';
+    div.onclick = (e) => { if(!e.target.classList.contains('del')) openModal(item.src); };
+    div.innerHTML = `<img src="${item.src}" alt="${item.category}"><span class="tag">${item.category}</span>${isAdmin ? `<button class="del" onclick="removeImage(${realIdx})">✕</button>` : ''}`;
+    grid.appendChild(div);
+  });
+}
+
+function removeImage(idx){
+  gallery.splice(idx,1);
+  saveJSON('gallery', gallery);
+  renderGallery();
+}
+
+document.getElementById('heroFileInput').addEventListener('change', function(e){
+  Array.from(e.target.files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      heroImages.unshift(ev.target.result);
+      saveJSON('heroImages', heroImages);
+      renderCarousel();
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value = '';
+});
+
+document.getElementById('fileInput').addEventListener('change', function(e){
+  const cat = document.getElementById('categorySelect').value;
+  Array.from(e.target.files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      gallery.unshift({src: ev.target.result, category: cat});
+      saveJSON('gallery', gallery);
+      renderGallery();
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value = '';
+});
+
+function openModal(src){
+  document.getElementById('modalImg').src = src;
+  document.getElementById('imageModal').classList.add('active');
+}
+function closeModal(){
+  document.getElementById('imageModal').classList.remove('active');
+}
+
+function createCalendarEvent(title, description, date, time) {
+  const startDateTime = new Date(`${date}T${time}:00`);
+  const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000);
+  const formatDateICS = (d) => d.toISOString().replace(/-|:|\.\d+/g, '');
+  
+  const icsData = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'BEGIN:VEVENT',
+    `SUMMARY:${title}`,
+    `DESCRIPTION:${description}`,
+    `DTSTART:${formatDateICS(startDateTime)}`,
+    `DTEND:${formatDateICS(endDateTime)}`,
+    'BEGIN:VALARM',
+    'TRIGGER:-PT1H',
+    'DESCRIPTION:Recordatorio de cita',
+    'ACTION:DISPLAY',
+    'END:VALARM',
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
+
+  const blob = new Blob([icsData], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', `Cita_AngelSanchez_${date}.ics`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+document.getElementById('bookingForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  const name = document.getElementById('bName').value;
+  const phone = document.getElementById('bPhone').value;
+  const date = document.getElementById('bDate').value;
+  const time = document.getElementById('bTime').value;
+  const service = document.getElementById('bService').value;
+
+  const appts = loadJSON('appointments', []);
+  appts.unshift({ name, phone, date, time, service, source:'Formulario web', status:'pending' });
+  saveJSON('appointments', appts);
+  renderAppts();
+
+  const msg = `Hola Angel, quiero reservar una cita:\n\nNombre: ${name}\nTeléfono: ${phone}\nFecha: ${date}\nHora: ${time}\nServicio: ${service}`;
+  window.open(`https://api.whatsapp.com/send?phone=50236307602&text=${encodeURIComponent(msg)}`, '_blank');
+
+  createCalendarEvent(`Cita de Maquillaje - ${service}`, `Cita confirmada con Angel Sanchez. Tel: +502 3630 7602`, date, time);
+
+  const confirmMsg = document.getElementById('confirmMsg');
+  confirmMsg.style.display = 'block';
+  confirmMsg.innerHTML = '¡Solicitud registrada! Recordatorio descargado.';
+  this.reset();
+});
+
+function renderConfirmed(){
+  const wrap = document.getElementById('confirmedWrap');
+  const appts = loadJSON('appointments', []);
+  if(appts.length === 0){ wrap.innerHTML = '<div class="empty-note">Aún no hay citas registradas en la agenda.</div>'; return; }
+  
+  const container = document.createElement('div');
+  appts.forEach(a => {
+    const card = document.createElement('div'); card.className = 'client-agenda-card';
+    
+    let statusBadge = '';
+    if(a.status === 'confirmed'){
+      statusBadge = '<span class="status-animated-badge confirmed">Confirmada</span>';
+    } else if(a.status === 'declined'){
+      statusBadge = '<span class="status-animated-badge" style="border:1px solid var(--line); color:var(--ink-dim); text-decoration:line-through;">Declinada</span>';
+    } else {
+      statusBadge = '<span class="status-animated-badge pending">En espera / En proceso</span>';
+    }
+
+    card.innerHTML = `
+      <div class="client-agenda-info">
+        <h3>${a.name} — ${a.service}</h3>
+        <p>📅 Fecha: <strong>${a.date || 'Por definir'}</strong> &nbsp;|&nbsp; ⏰ Hora: <strong>${a.time || 'Por definir'}</strong></p>
+        <span class="details-more">ℹ️ Canal: ${a.source} · Tel: ${a.phone}</span>
+      </div>
+      <div>${statusBadge}</div>
+    `;
+    container.appendChild(card);
+  });
+  wrap.innerHTML = ''; wrap.appendChild(container);
+}
+
+function renderAppts(){
+  const wrap = document.getElementById('apptList');
+  const appts = loadJSON('appointments', []);
+  wrap.innerHTML = '';
+  if(appts.length === 0){ wrap.innerHTML = '<div class="appt-empty">Aún no hay citas registradas.</div>'; renderConfirmed(); return; }
+  appts.forEach((a, idx) => {
+    const row = document.createElement('div'); row.className = 'appt-row';
+    const badge = a.status === 'confirmed' ? '<span class="status-badge status-confirmed">Confirmada</span>' : a.status === 'declined' ? '<span class="status-badge status-declined">Declinada</span>' : '<span class="status-badge status-pending">Pendiente</span>';
+    let actions = `<button class="del" onclick="removeAppt(${idx})">✕</button>`;
+    if(a.status === 'pending'){ actions = `<button class="accept" onclick="setStatus(${idx},'confirmed')">Aceptar</button><button onclick="setStatus(${idx},'declined')">Declinar</button>` + actions; }
+    row.innerHTML = `<div><strong>${a.name}</strong><span>${a.phone} · ${a.service}</span><span>${a.date||''} ${a.time||''} · ${a.source}</span></div><div style="display:flex;align-items:center;gap:10px;">${badge}<div class="appt-actions">${actions}</div></div>`;
+    wrap.appendChild(row);
+  });
+  renderConfirmed();
+}
+function setStatus(idx, status){ const appts = loadJSON('appointments', []); appts[idx].status = status; saveJSON('appointments', appts); renderAppts(); }
+function removeAppt(idx){ const appts = loadJSON('appointments', []); appts.splice(idx,1); saveJSON('appointments', appts); renderAppts(); }
+document.getElementById('manualForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  const date = document.getElementById('mDate').value;
+  const time = document.getElementById('mTime').value;
+  const name = document.getElementById('mName').value;
+  const service = document.getElementById('mService').value;
+
+  const appts = loadJSON('appointments', []);
+  appts.unshift({
+    name: name,
+    phone: document.getElementById('mPhone').value,
+    date: date,
+    time: time,
+    service: service,
+    source: 'Registro manual', status: 'confirmed'
+  });
+  saveJSON('appointments', appts);
+  renderAppts();
+  createCalendarEvent(`Cita de Maquillaje - ${service} (${name})`, `Cita agendada manualmente.`, date, time);
+  this.reset();
+  alert('Cita registrada correctamente.');
+});
+
+loadSectionTexts();
+applyAdminUI();
+renderCarousel();
+resetTimer();
+</script>
+</body>
+</html>
