@@ -561,7 +561,6 @@ let siteData = {
 
 let appointmentsData = [];
 
-// --- Modelo de galería en columnas/colecciones separadas ---
 const GALLERY_CATEGORIES = ['Novias','Social','Editorial','Glamour'];
 const HERO_COLLECTION = 'heroCarousel';
 function galleryCollectionName(cat){ return 'gallery_' + cat; }
@@ -582,14 +581,12 @@ function setupGalleryRealtime(){
   galleryRealtimeReady = true;
   const { collection, onSnapshot } = window.firestoreModules;
 
-  // Escuchar carrusel de portada
   onSnapshot(collection(window.db, HERO_COLLECTION), snap => {
     heroDocs = [];
     snap.forEach(d => heroDocs.push({ id: d.id, ...d.data() }));
     rebuildSiteDataFromRealtime();
   }, err => console.error('Error en carrusel:', err));
 
-  // Escuchar cada categoría en su propia colección/columna
   GALLERY_CATEGORIES.forEach(cat => {
     onSnapshot(collection(window.db, galleryCollectionName(cat)), snap => {
       const arr = [];
