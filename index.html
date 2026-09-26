@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Angel Sanchez — Maquillista Profesional</title>
+
+<!-- Enlace para PWABuilder -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#121212">
+
 <style>
 :root{
   --bg:#121212; --bg-soft:#1a1a1a; --card:#1e1e1e;
@@ -33,8 +38,14 @@ body.is-admin [contenteditable="true"]:focus{outline:2px solid var(--gold); back
 
 header.nav{position:fixed; top:0; left:0; right:0; z-index:100; background:rgba(18,18,18,0.92); backdrop-filter:blur(12px); border-bottom:1px solid var(--line);}
 .nav-inner{display:flex; align-items:center; justify-content:space-between; padding:16px 32px; max-width:1180px; margin:0 auto; gap:20px;}
-.brand{font-family:Georgia, serif; font-size:1.35rem; letter-spacing:.02em;}
-.brand em{font-style:italic; color:var(--gold);}
+
+/* Estilos mejorados para el logotipo */
+.brand-logo{display:flex; align-items:center; gap:12px;}
+.brand-logo svg{width:36px; height:36px; flex-shrink:0;}
+.brand-text{display:flex; flex-direction:column; font-family:Georgia, serif; line-height:1.15;}
+.brand-name{font-size:1.15rem; letter-spacing:.02em; color:var(--ink);}
+.brand-sub{font-size:0.75rem; letter-spacing:.12em; color:var(--gold); text-transform:uppercase; font-style:italic;}
+
 .nav-links{display:flex; gap:28px; font-size:.92rem; align-items:center;}
 .nav-links a{color:var(--ink-dim); transition:color .3s;}
 .nav-links a:hover{color:var(--gold);}
@@ -229,7 +240,18 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
 
 <header class="nav">
   <div class="nav-inner">
-    <div class="brand">Angel Sanchez <em>Maquillaje</em></div>
+    <a href="#inicio" class="brand-logo">
+      <!-- Icono vectorial elegante de maquillaje (Pincel/Brocha estilizada en tono dorado) -->
+      <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="24" cy="24" r="22" stroke="#d4af37" stroke-width="2" fill="#121212"/>
+        <path d="M24 13C20.134 13 17 16.134 17 20C17 22.386 18.172 24.471 19.945 25.727L21 33.5H27L28.055 25.727C29.828 24.471 31 22.386 31 20C31 16.134 27.866 13 24 13Z" fill="#d4af37" fill-opacity="0.15" stroke="#d4af37" stroke-width="1.5"/>
+        <path d="M21 35.5H27V38.5H21V35.5Z" fill="#d4af37"/>
+      </svg>
+      <div class="brand-text">
+        <span class="brand-name">Angel Sanchez</span>
+        <span class="brand-sub">Maquillaje</span>
+      </div>
+    </a>
     <button class="menu-toggle" id="menuToggle" onclick="toggleMenu()">
       <span></span>
       <span></span>
@@ -444,7 +466,14 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
 
 <footer>
   <div class="wrap">
-    <span class="brand">Angel Sanchez — Maquillista Profesional</span>
+    <div class="brand-logo" style="justify-content:center; margin-bottom:10px;">
+      <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:28px; height:28px;">
+        <circle cx="24" cy="24" r="22" stroke="#d4af37" stroke-width="2" fill="#121212"/>
+        <path d="M24 13C20.134 13 17 16.134 17 20C17 22.386 18.172 24.471 19.945 25.727L21 33.5H27L28.055 25.727C29.828 24.471 31 22.386 31 20C31 16.134 27.866 13 24 13Z" fill="#d4af37" fill-opacity="0.15" stroke="#d4af37" stroke-width="1.5"/>
+        <path d="M21 35.5H27V38.5H21V35.5Z" fill="#d4af37"/>
+      </svg>
+      <span style="font-family:Georgia,serif; font-size:1.05rem;">Angel Sanchez — Maquillista Profesional</span>
+    </div>
     <p>+502 3630 7602 · Guatemala · © 2026</p>
   </div>
 </footer>
@@ -561,7 +590,6 @@ let siteData = {
 
 let appointmentsData = [];
 
-// --- Modelo de galería en columnas/colecciones separadas ---
 const GALLERY_CATEGORIES = ['Novias','Social','Editorial','Glamour'];
 const HERO_COLLECTION = 'heroCarousel';
 function galleryCollectionName(cat){ return 'gallery_' + cat; }
@@ -584,13 +612,11 @@ function setupCloudRealtime(){
 
   const { doc, collection, onSnapshot } = window.firestoreModules;
 
-  // TEXTOS: cualquier modificación del administrador aparece inmediatamente.
   onSnapshot(doc(window.db, 'config', 'texts'), snap => {
     siteData.texts = snap.exists() ? snap.data() : {};
     loadSectionTexts();
   }, err => console.error('Error realtime en textos:', err));
 
-  // SERVICIOS: altas, cambios de nombre/descripción/precio y eliminaciones.
   onSnapshot(collection(window.db, 'services'), snap => {
     siteData.services = [];
     snap.forEach(d => siteData.services.push({ id:d.id, ...d.data() }));
@@ -598,21 +624,18 @@ function setupCloudRealtime(){
     renderFinancialStats();
   }, err => console.error('Error realtime en servicios:', err));
 
-  // SECCIONES PERSONALIZADAS.
   onSnapshot(collection(window.db, 'customSections'), snap => {
     siteData.customSections = [];
     snap.forEach(d => siteData.customSections.push({ id:d.id, ...d.data() }));
     renderCustomSections();
   }, err => console.error('Error realtime en secciones:', err));
 
-  // RESEÑAS.
   onSnapshot(collection(window.db, 'reviews'), snap => {
     siteData.reviews = [];
     snap.forEach(d => siteData.reviews.push({ id:d.id, ...d.data() }));
     renderReviews();
   }, err => console.error('Error realtime en reseñas:', err));
 
-  // CITAS: el administrador cambia el estado y el cliente lo ve automáticamente.
   onSnapshot(collection(window.db, 'appointments'), snap => {
     appointmentsData = [];
     snap.forEach(d => appointmentsData.push({ id:d.id, ...d.data() }));
@@ -625,14 +648,12 @@ function setupGalleryRealtime(){
   galleryRealtimeReady = true;
   const { collection, onSnapshot } = window.firestoreModules;
 
-  // Escuchar carrusel de portada
   onSnapshot(collection(window.db, HERO_COLLECTION), snap => {
     heroDocs = [];
     snap.forEach(d => heroDocs.push({ id: d.id, ...d.data() }));
     rebuildSiteDataFromRealtime();
   }, err => console.error('Error en carrusel:', err));
 
-  // Escuchar cada categoría en su propia colección/columna
   GALLERY_CATEGORIES.forEach(cat => {
     onSnapshot(collection(window.db, galleryCollectionName(cat)), snap => {
       const arr = [];
@@ -667,7 +688,7 @@ function compressImageFile(file, maxDim = 1400, quality = 0.72){
           dataUrl = canvas.toDataURL('image/jpeg', q);
           attempts++;
         }
-        if(dataUrl.length > 950000){ reject(new Error('La imagen sigue siendo muy pesada, intenta con una foto más liviana.')); return; }
+        if(dataUrl.length > 950000){ reject(new Error('La imagen sigue siendo muy pesada.')); return; }
         resolve(dataUrl);
       };
       img.src = e.target.result;
@@ -750,7 +771,6 @@ async function initAppFromCloud(){
       appointmentsData.push({ id: d.id, ...d.data() });
     });
 
-    // A partir de aquí, Firestore mantiene esta página sincronizada automáticamente.
     setupCloudRealtime();
 
   } catch(e) {
@@ -879,11 +899,10 @@ document.getElementById('loginFormUser').addEventListener('submit', async functi
       checkUserSessionModal();
       alert(`¡Bienvenido de nuevo, ${currentUser.name}!`);
     } else {
-      alert('No se encontró ninguna cuenta con ese correo o teléfono. Por favor, regístrate.');
+      alert('No se encontró ninguna cuenta con ese correo o teléfono.');
     }
   } catch(err) {
     console.error("Error al iniciar sesión:", err);
-    alert('Ocurrió un error al verificar tus datos.');
   }
 });
 
@@ -994,7 +1013,6 @@ window.removeHeroImageDoc = async function(docId){
     await deleteDoc(doc(window.db, HERO_COLLECTION, docId));
   } catch(e) {
     console.error("Error al eliminar imagen de carrusel:", e);
-    alert('No se pudo eliminar la imagen.');
   }
 }
 
@@ -1174,7 +1192,6 @@ async function removeGalleryImage(id, category){
     await deleteDoc(doc(window.db, galleryCollectionName(category), id));
   } catch(e) {
     console.error("Error al eliminar imagen de galería:", e);
-    alert('No se pudo eliminar la imagen.');
   }
 }
 
@@ -1302,7 +1319,6 @@ document.addEventListener('DOMContentLoaded', () => {
           await addDoc(collection(window.db, HERO_COLLECTION), { src: dataUrl });
         }catch(err){
           console.error("Error al subir foto del carrusel:", err);
-          alert('No se pudo subir la foto al carrusel: ' + (err.message || err));
         }
       });
     });
@@ -1322,7 +1338,6 @@ document.addEventListener('DOMContentLoaded', () => {
           await addDoc(collection(window.db, galleryCollectionName(cat)), { src: dataUrl });
         }catch(err){
           console.error("Error al subir foto de la galería:", err);
-          alert('No se pudo subir la foto a la galería: ' + (err.message || err));
         }
       });
     });
@@ -1389,7 +1404,6 @@ document.getElementById('bookingForm').addEventListener('submit', async function
     renderAppts();
   } catch(err) {
     console.error("Error al guardar cita en Firebase:", err);
-    alert('No se pudo guardar tu cita en la base de datos, pero se enviará por WhatsApp.');
   }
 
   const msg = `Hola Angel, quiero reservar una cita:\n\nNombre: ${name}\nTeléfono: ${phone}\nFecha: ${date}\nHora: ${time}\nServicio: ${service}`;
@@ -1413,7 +1427,7 @@ function renderConfirmed(){
   }
 
   if(displayAppts.length === 0){ 
-    wrap.innerHTML = `<div class="empty-note">${currentUser ? 'Aún no tienes citas registradas. ¡Agenda la tuya arriba!' : 'Visualiza el estado de tus citas o agenda una nueva arriba.'}</div>`; 
+    wrap.innerHTML = `<div class="empty-note">${currentUser ? 'Aún no tienes citas registradas.' : 'Visualiza el estado de tus citas o agenda una nueva arriba.'}</div>`; 
     return; 
   }
   
@@ -1507,7 +1521,7 @@ window.setStatus = async function(id, status){
     renderAppts();
 
     if(status === 'declined' && appt.phone) {
-      const msg = `Hola ${appt.name}, lamentamos informarte que por inconvenientes de disponibilidad hemos tenido que declinar tu solicitud de cita para "${appt.service}" del ${appt.date || ''}. ¡Disculpa los inconvenientes!`;
+      const msg = `Hola ${appt.name}, lamentamos informarte que por inconvenientes de disponibilidad hemos tenido que declinar tu solicitud para "${appt.service}".`;
       window.open(`https://api.whatsapp.com/send?phone=502${appt.phone}&text=${encodeURIComponent(msg)}`, '_blank');
     }
   }
@@ -1516,11 +1530,6 @@ window.setStatus = async function(id, status){
 window.removeAppt = async function(id){ 
   const appt = appointmentsData.find(item => item.id === id);
   if(appt) {
-    if(appt.phone && confirm('¿Deseas enviar un mensaje de WhatsApp al cliente notificándole la cancelación de su cita?')) {
-      const msg = `Hola ${appt.name}, te escribimos de parte de Angel Sanchez Maquillaje para comunicarte que tu cita para "${appt.service}" del ${appt.date || ''} ha sido cancelada de nuestro sistema. ¡Saludos!`;
-      window.open(`https://api.whatsapp.com/send?phone=502${appt.phone}&text=${encodeURIComponent(msg)}`, '_blank');
-    }
-
     try {
       const { doc, deleteDoc } = window.firestoreModules;
       await deleteDoc(doc(window.db, "appointments", id));
@@ -1571,5 +1580,17 @@ if(manualForm){
 applyAdminUI();
 resetTimer();
 </script>
+
+<!-- Registro automático de Service Worker para PWABuilder -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then(reg => console.log('Service Worker registrado con éxito:', reg))
+        .catch(err => console.log('Service Worker no disponible o pendiente de generar:', err));
+    });
+  }
+</script>
+
 </body>
 </html>
