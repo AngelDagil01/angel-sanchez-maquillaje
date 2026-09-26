@@ -531,10 +531,10 @@ const defaultHeroImages = [
 ];
 
 const defaultGallery = [
-  {src: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1066"><rect width="100%" height="100%" fill="%231a1a1a"/><text x="50%" y="50%" font-family="Georgia" font-size="32" fill="%23d4af37" text-anchor="middle">Editorial Look</text></svg>', category: 'Editorial'},
-  {src: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1066"><rect width="100%" height="100%" fill="%23222222"/><text x="50%" y="50%" font-family="Georgia" font-size="32" fill="%23e6c594" text-anchor="middle">Maquillaje Novia</text></svg>', category: 'Novias'},
-  {src: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1066"><rect width="100%" height="100%" fill="%231c1c1c"/><text x="50%" y="50%" font-family="Georgia" font-size="32" fill="%23d4af37" text-anchor="middle">Glamour Night</text></svg>', category: 'Glamour'},
-  {src: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1066"><rect width="100%" height="100%" fill="%23262626"/><text x="50%" y="50%" font-family="Georgia" font-size="32" fill="%23e6c594" text-anchor="middle">Evento Social</text></svg>', category: 'Social'}
+  {src: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1066"><rect width="100%" height="100%" fill="%231a1a1a"/><text x="50%" y="50%" font-family="Georgia" font-size="32" fill="%23d4af37" text-anchor="middle">Editorial Look</text></svg>', category: 'Editorial', type: 'gallery'},
+  {src: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1066"><rect width="100%" height="100%" fill="%23222222"/><text x="50%" y="50%" font-family="Georgia" font-size="32" fill="%23e6c594" text-anchor="middle">Maquillaje Novia</text></svg>', category: 'Novias', type: 'gallery'},
+  {src: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1066"><rect width="100%" height="100%" fill="%231c1c1c"/><text x="50%" y="50%" font-family="Georgia" font-size="32" fill="%23d4af37" text-anchor="middle">Glamour Night</text></svg>', category: 'Glamour', type: 'gallery'},
+  {src: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1066"><rect width="100%" height="100%" fill="%23262626"/><text x="50%" y="50%" font-family="Georgia" font-size="32" fill="%23e6c594" text-anchor="middle">Evento Social</text></svg>', category: 'Social', type: 'gallery'}
 ];
 
 const defaultServices = [
@@ -560,82 +560,87 @@ let siteData = {
 };
 
 let appointmentsData = [];
-let realtimesInitialized = false;
 
+// --- Modelo de galería en columnas/colecciones separadas ---
 const GALLERY_CATEGORIES = ['Novias','Social','Editorial','Glamour'];
 const HERO_COLLECTION = 'heroCarousel';
 function galleryCollectionName(cat){ return 'gallery_' + cat; }
 
 let heroDocs = [];                 
 let galleryByCategory = { Novias:[], Social:[], Editorial:[], Glamour:[] }; 
+let galleryRealtimeReady = false;
+let cloudRealtimeReady = false;
 
 function rebuildSiteDataFromRealtime(){
   siteData.heroImages = heroDocs.map(h => h.src);
   siteData.gallery = GALLERY_CATEGORIES.flatMap(cat => galleryByCategory[cat]);
-  renderCarousel();
-  renderGallery();
+  if (typeof renderCarousel === 'function') renderCarousel();
+  if (typeof renderGallery === 'function') renderGallery();
 }
 
-function setupRealtimeListeners(){
-  if(realtimesInitialized || !window.db) return;
-  realtimesInitialized = true;
+function setupCloudRealtime(){
+  if(cloudRealtimeReady || !window.db) return;
+  cloudRealtimeReady = true;
+
+  const { doc, collection, onSnapshot } = window.firestoreModules;
+
+  // TEXTOS: cualquier modificación del administrador aparece inmediatamente.
+  onSnapshot(doc(window.db, 'config', 'texts'), snap => {
+    siteData.texts = snap.exists() ? snap.data() : {};
+    loadSectionTexts();
+  }, err => console.error('Error realtime en textos:', err));
+
+  // SERVICIOS: altas, cambios de nombre/descripción/precio y eliminaciones.
+  onSnapshot(collection(window.db, 'services'), snap => {
+    siteData.services = [];
+    snap.forEach(d => siteData.services.push({ id:d.id, ...d.data() }));
+    renderServices();
+    renderFinancialStats();
+  }, err => console.error('Error realtime en servicios:', err));
+
+  // SECCIONES PERSONALIZADAS.
+  onSnapshot(collection(window.db, 'customSections'), snap => {
+    siteData.customSections = [];
+    snap.forEach(d => siteData.customSections.push({ id:d.id, ...d.data() }));
+    renderCustomSections();
+  }, err => console.error('Error realtime en secciones:', err));
+
+  // RESEÑAS.
+  onSnapshot(collection(window.db, 'reviews'), snap => {
+    siteData.reviews = [];
+    snap.forEach(d => siteData.reviews.push({ id:d.id, ...d.data() }));
+    renderReviews();
+  }, err => console.error('Error realtime en reseñas:', err));
+
+  // CITAS: el administrador cambia el estado y el cliente lo ve automáticamente.
+  onSnapshot(collection(window.db, 'appointments'), snap => {
+    appointmentsData = [];
+    snap.forEach(d => appointmentsData.push({ id:d.id, ...d.data() }));
+    renderAppts();
+  }, err => console.error('Error realtime en citas:', err));
+}
+
+function setupGalleryRealtime(){
+  if(galleryRealtimeReady || !window.db) return;
+  galleryRealtimeReady = true;
   const { collection, onSnapshot } = window.firestoreModules;
 
-  // 1. Carrusel
+  // Escuchar carrusel de portada
   onSnapshot(collection(window.db, HERO_COLLECTION), snap => {
     heroDocs = [];
     snap.forEach(d => heroDocs.push({ id: d.id, ...d.data() }));
     rebuildSiteDataFromRealtime();
-  }, err => console.error('Error carrusel:', err));
+  }, err => console.error('Error en carrusel:', err));
 
-  // 2. Galerías por categoría
+  // Escuchar cada categoría en su propia colección/columna
   GALLERY_CATEGORIES.forEach(cat => {
     onSnapshot(collection(window.db, galleryCollectionName(cat)), snap => {
       const arr = [];
       snap.forEach(d => arr.push({ id: d.id, category: cat, ...d.data() }));
       galleryByCategory[cat] = arr;
       rebuildSiteDataFromRealtime();
-    }, err => console.error(`Error galería ${cat}:`, err));
+    }, err => console.error(`Error en categoría ${cat}:`, err));
   });
-
-  // 3. Servicios
-  onSnapshot(collection(window.db, "services"), snap => {
-    siteData.services = [];
-    snap.forEach(d => siteData.services.push({ id: d.id, ...d.data() }));
-    if(siteData.services.length === 0){
-      defaultServices.forEach(async s => await addDoc(collection(window.db, "services"), s));
-    }
-    renderServices();
-  }, err => console.error('Error servicios:', err));
-
-  // 4. Reseñas
-  onSnapshot(collection(window.db, "reviews"), snap => {
-    siteData.reviews = [];
-    snap.forEach(d => siteData.reviews.push({ id: d.id, ...d.data() }));
-    renderReviews();
-  }, err => console.error('Error reseñas:', err));
-
-  // 5. Citas
-  onSnapshot(collection(window.db, "appointments"), snap => {
-    appointmentsData = [];
-    snap.forEach(d => appointmentsData.push({ id: d.id, ...d.data() }));
-    renderAppts();
-  }, err => console.error('Error citas:', err));
-
-  // 6. Secciones personalizadas
-  onSnapshot(collection(window.db, "customSections"), snap => {
-    siteData.customSections = [];
-    snap.forEach(d => siteData.customSections.push({ id: d.id, ...d.data() }));
-    renderCustomSections();
-  }, err => console.error('Error secciones:', err));
-
-  // 7. Textos generales
-  onSnapshot(doc(window.db, "config", "texts"), docSnap => {
-    if(docSnap.exists()){
-      siteData.texts = docSnap.data() || {};
-      loadSectionTexts();
-    }
-  }, err => console.error('Error textos:', err));
 }
 
 function compressImageFile(file, maxDim = 1400, quality = 0.72){
@@ -662,7 +667,7 @@ function compressImageFile(file, maxDim = 1400, quality = 0.72){
           dataUrl = canvas.toDataURL('image/jpeg', q);
           attempts++;
         }
-        if(dataUrl.length > 950000){ reject(new Error('La imagen sigue siendo muy pesada.')); return; }
+        if(dataUrl.length > 950000){ reject(new Error('La imagen sigue siendo muy pesada, intenta con una foto más liviana.')); return; }
         resolve(dataUrl);
       };
       img.src = e.target.result;
@@ -673,7 +678,85 @@ function compressImageFile(file, maxDim = 1400, quality = 0.72){
 
 async function initAppFromCloud(){
   if(!window.db) return;
-  setupRealtimeListeners();
+  try {
+    const { doc, getDoc, setDoc, collection, getDocs, addDoc } = window.firestoreModules;
+    
+    const configRef = doc(window.db, "config", "texts");
+    const configSnap = await getDoc(configRef);
+    if(configSnap.exists()){
+      siteData.texts = configSnap.data();
+    } else {
+      await setDoc(configRef, {});
+    }
+
+    const servicesCol = collection(window.db, "services");
+    const servicesSnap = await getDocs(servicesCol);
+    siteData.services = [];
+    servicesSnap.forEach(d => {
+      siteData.services.push({ id: d.id, ...d.data() });
+    });
+    if(siteData.services.length === 0){
+      for(const s of defaultServices){
+        const ref = await addDoc(servicesCol, s);
+        siteData.services.push({ id: ref.id, ...s });
+      }
+    }
+
+    const heroCol = collection(window.db, HERO_COLLECTION);
+    const heroSnap = await getDocs(heroCol);
+    if(heroSnap.empty){
+      for(const h of defaultHeroImages){
+        await addDoc(heroCol, { src: h });
+      }
+    }
+
+    for(const cat of GALLERY_CATEGORIES){
+      const catCol = collection(window.db, galleryCollectionName(cat));
+      const catSnap = await getDocs(catCol);
+      if(catSnap.empty){
+        const defaultsForCat = defaultGallery.filter(g => g.category === cat);
+        for(const g of defaultsForCat){
+          await addDoc(catCol, { src: g.src });
+        }
+      }
+    }
+
+    setupGalleryRealtime();
+
+    const customCol = collection(window.db, "customSections");
+    const customSnap = await getDocs(customCol);
+    siteData.customSections = [];
+    customSnap.forEach(d => {
+      siteData.customSections.push({ id: d.id, ...d.data() });
+    });
+
+    const reviewsCol = collection(window.db, "reviews");
+    const reviewsSnap = await getDocs(reviewsCol);
+    siteData.reviews = [];
+    reviewsSnap.forEach(d => {
+      siteData.reviews.push({ id: d.id, ...d.data() });
+    });
+    if(siteData.reviews.length === 0){
+      for(const r of defaultReviews){
+        const ref = await addDoc(reviewsCol, r);
+        siteData.reviews.push({ id: ref.id, ...r });
+      }
+    }
+
+    const apptsCol = collection(window.db, "appointments");
+    const apptsSnap = await getDocs(apptsCol);
+    appointmentsData = [];
+    apptsSnap.forEach(d => {
+      appointmentsData.push({ id: d.id, ...d.data() });
+    });
+
+    // A partir de aquí, Firestore mantiene esta página sincronizada automáticamente.
+    setupCloudRealtime();
+
+  } catch(e) {
+    console.error("Error al cargar de Firestore:", e);
+  }
+  renderAll();
   checkUserSessionModal();
 }
 window.initAppFromCloud = initAppFromCloud;
@@ -750,7 +833,7 @@ document.getElementById('accountForm').addEventListener('submit', async function
       const { collection, addDoc } = window.firestoreModules;
       await addDoc(collection(window.db, "users"), currentUser);
     } catch(err) {
-      console.error("Error guardando usuario:", err);
+      console.error("Error guardando usuario en nube:", err);
     }
   }
 
@@ -764,7 +847,10 @@ document.getElementById('loginFormUser').addEventListener('submit', async functi
   e.preventDefault();
   const queryVal = document.getElementById('loginEmailOrPhone').value.trim();
   
-  if(!window.db) { alert('Base de datos no conectada.'); return; }
+  if(!window.db) {
+    alert('Base de datos no conectada.');
+    return;
+  }
 
   try {
     const { collection, getDocs, query, where } = window.firestoreModules;
@@ -797,6 +883,7 @@ document.getElementById('loginFormUser').addEventListener('submit', async functi
     }
   } catch(err) {
     console.error("Error al iniciar sesión:", err);
+    alert('Ocurrió un error al verificar tus datos.');
   }
 });
 
@@ -829,7 +916,10 @@ function openAccountModal(){
 }
 
 function openProfileModal(){
-  if(!currentUser) { openAccountModal(); return; }
+  if(!currentUser) {
+    openAccountModal();
+    return;
+  }
   const userAppts = appointmentsData.filter(a => a.userEmail === currentUser.email || a.phone === currentUser.phone);
   const confirmedCount = userAppts.filter(a => a.status === 'confirmed').length;
 
@@ -902,7 +992,10 @@ window.removeHeroImageDoc = async function(docId){
   try {
     const { doc, deleteDoc } = window.firestoreModules;
     await deleteDoc(doc(window.db, HERO_COLLECTION, docId));
-  } catch(e) { console.error(e); }
+  } catch(e) {
+    console.error("Error al eliminar imagen de carrusel:", e);
+    alert('No se pudo eliminar la imagen.');
+  }
 }
 
 function showSlide(i){
@@ -1016,7 +1109,9 @@ async function updateService(id, field, value){
   try {
     const { doc, updateDoc } = window.firestoreModules;
     await updateDoc(doc(window.db, "services", id), updatePayload);
-  } catch(e) { console.error(e); }
+  } catch(e) {
+    console.error("Error al actualizar servicio:", e);
+  }
 }
 
 async function addNewService(){
@@ -1026,7 +1121,10 @@ async function addNewService(){
   try {
     const { collection, addDoc } = window.firestoreModules;
     await addDoc(collection(window.db, "services"), newServ);
-  } catch(e) { console.error(e); }
+    initAppFromCloud();
+  } catch(e) {
+    console.error("Error al agregar servicio:", e);
+  }
 }
 
 async function removeService(id){
@@ -1034,7 +1132,10 @@ async function removeService(id){
   try {
     const { doc, deleteDoc } = window.firestoreModules;
     await deleteDoc(doc(window.db, "services", id));
-  } catch(e) { console.error(e); }
+    initAppFromCloud();
+  } catch(e) {
+    console.error("Error al eliminar servicio:", e);
+  }
 }
 
 function filterGallery(category, btn){
@@ -1071,7 +1172,10 @@ async function removeGalleryImage(id, category){
   try {
     const { doc, deleteDoc } = window.firestoreModules;
     await deleteDoc(doc(window.db, galleryCollectionName(category), id));
-  } catch(e) { console.error(e); }
+  } catch(e) {
+    console.error("Error al eliminar imagen de galería:", e);
+    alert('No se pudo eliminar la imagen.');
+  }
 }
 
 function renderReviews(){
@@ -1103,8 +1207,13 @@ document.getElementById('reviewForm').addEventListener('submit', async function(
     try {
       const { collection, addDoc } = window.firestoreModules;
       await addDoc(collection(window.db, "reviews"), newReview);
-    } catch(err) { console.error(err); }
+    } catch(err) {
+      console.error("Error al guardar reseña:", err);
+    }
   }
+
+  siteData.reviews.unshift(newReview);
+  renderReviews();
   this.reset();
   alert('¡Gracias por tu reseña! Ha sido publicada con éxito.');
 });
@@ -1119,9 +1228,12 @@ async function addNewCustomSection(){
     try {
       const { collection, addDoc } = window.firestoreModules;
       await addDoc(collection(window.db, "customSections"), newSec);
-    } catch(e) { console.error(e); }
+    } catch(e) {
+      console.error("Error al crear sección:", e);
+    }
   }
   titleInput.value = '';
+  initAppFromCloud();
 }
 
 async function updateCustomSectionContent(id, newText){
@@ -1129,7 +1241,9 @@ async function updateCustomSectionContent(id, newText){
   try {
     const { doc, updateDoc } = window.firestoreModules;
     await updateDoc(doc(window.db, "customSections", id), { content: newText.trim() });
-  } catch(e) { console.error(e); }
+  } catch(e) {
+    console.error("Error al actualizar sección:", e);
+  }
 }
 
 async function removeCustomSection(id){
@@ -1138,7 +1252,10 @@ async function removeCustomSection(id){
     try {
       const { doc, deleteDoc } = window.firestoreModules;
       await deleteDoc(doc(window.db, "customSections", id));
-    } catch(e) { console.error(e); }
+      initAppFromCloud();
+    } catch(e) {
+      console.error("Error al eliminar sección:", e);
+    }
   }
 }
 
@@ -1183,7 +1300,10 @@ document.addEventListener('DOMContentLoaded', () => {
           const dataUrl = await compressImageFile(file);
           const { collection, addDoc } = window.firestoreModules;
           await addDoc(collection(window.db, HERO_COLLECTION), { src: dataUrl });
-        }catch(err){ alert('Error al subir foto: ' + err.message); }
+        }catch(err){
+          console.error("Error al subir foto del carrusel:", err);
+          alert('No se pudo subir la foto al carrusel: ' + (err.message || err));
+        }
       });
     });
   }
@@ -1200,7 +1320,10 @@ document.addEventListener('DOMContentLoaded', () => {
           const dataUrl = await compressImageFile(file);
           const { collection, addDoc } = window.firestoreModules;
           await addDoc(collection(window.db, galleryCollectionName(cat)), { src: dataUrl });
-        }catch(err){ alert('Error al subir foto: ' + err.message); }
+        }catch(err){
+          console.error("Error al subir foto de la galería:", err);
+          alert('No se pudo subir la foto a la galería: ' + (err.message || err));
+        }
       });
     });
   }
@@ -1247,7 +1370,11 @@ document.getElementById('bookingForm').addEventListener('submit', async function
   const service = document.getElementById('bService').value;
 
   const newAppt = { 
-    name, phone, date, time, service, 
+    name, 
+    phone, 
+    date, 
+    time, 
+    service, 
     userEmail: currentUser ? currentUser.email : 'Sin registrar',
     source:'Formulario web', 
     status:'pending', 
@@ -1256,8 +1383,14 @@ document.getElementById('bookingForm').addEventListener('submit', async function
   
   try {
     const { collection, addDoc } = window.firestoreModules;
-    await addDoc(collection(window.db, "appointments"), newAppt);
-  } catch(err) { console.error(err); }
+    const docRef = await addDoc(collection(window.db, "appointments"), newAppt);
+    newAppt.id = docRef.id;
+    appointmentsData.unshift(newAppt);
+    renderAppts();
+  } catch(err) {
+    console.error("Error al guardar cita en Firebase:", err);
+    alert('No se pudo guardar tu cita en la base de datos, pero se enviará por WhatsApp.');
+  }
 
   const msg = `Hola Angel, quiero reservar una cita:\n\nNombre: ${name}\nTeléfono: ${phone}\nFecha: ${date}\nHora: ${time}\nServicio: ${service}`;
   window.open(`https://api.whatsapp.com/send?phone=50236307602&text=${encodeURIComponent(msg)}`, '_blank');
@@ -1362,29 +1495,40 @@ function renderAppts(){
 }
 
 window.setStatus = async function(id, status){ 
-  try {
-    const { doc, updateDoc } = window.firestoreModules;
-    await updateDoc(doc(window.db, "appointments", id), { status: status });
-    const appt = appointmentsData.find(item => item.id === id);
-    if(status === 'declined' && appt && appt.phone) {
-      const msg = `Hola ${appt.name}, lamentamos informarte que por inconvenientes de disponibilidad hemos tenido que declinar tu solicitud de cita para "${appt.service}" del ${appt.date || ''}.`;
+  const appt = appointmentsData.find(item => item.id === id);
+  if(appt) {
+    appt.status = status;
+    try {
+      const { doc, updateDoc } = window.firestoreModules;
+      await updateDoc(doc(window.db, "appointments", id), { status: status });
+    } catch(err) {
+      console.error("Error al actualizar estado:", err);
+    }
+    renderAppts();
+
+    if(status === 'declined' && appt.phone) {
+      const msg = `Hola ${appt.name}, lamentamos informarte que por inconvenientes de disponibilidad hemos tenido que declinar tu solicitud de cita para "${appt.service}" del ${appt.date || ''}. ¡Disculpa los inconvenientes!`;
       window.open(`https://api.whatsapp.com/send?phone=502${appt.phone}&text=${encodeURIComponent(msg)}`, '_blank');
     }
-  } catch(err) { console.error(err); }
+  }
 }
 
 window.removeAppt = async function(id){ 
   const appt = appointmentsData.find(item => item.id === id);
   if(appt) {
     if(appt.phone && confirm('¿Deseas enviar un mensaje de WhatsApp al cliente notificándole la cancelación de su cita?')) {
-      const msg = `Hola ${appt.name}, te escribimos de parte de Angel Sanchez Maquillaje para comunicarte que tu cita para "${appt.service}" del ${appt.date || ''} ha sido cancelada.`;
+      const msg = `Hola ${appt.name}, te escribimos de parte de Angel Sanchez Maquillaje para comunicarte que tu cita para "${appt.service}" del ${appt.date || ''} ha sido cancelada de nuestro sistema. ¡Saludos!`;
       window.open(`https://api.whatsapp.com/send?phone=502${appt.phone}&text=${encodeURIComponent(msg)}`, '_blank');
     }
 
     try {
       const { doc, deleteDoc } = window.firestoreModules;
       await deleteDoc(doc(window.db, "appointments", id));
-    } catch(err) { console.error(err); }
+      appointmentsData = appointmentsData.filter(item => item.id !== id);
+      renderAppts();
+    } catch(err) {
+      console.error("Error al eliminar cita:", err);
+    }
   }
 }
 
@@ -1410,8 +1554,13 @@ if(manualForm){
 
     try {
       const { collection, addDoc }  = window.firestoreModules;
-      await addDoc(collection(window.db, "appointments"), newAppt);
-    } catch(err) { console.error(err); }
+      const docRef = await addDoc(collection(window.db, "appointments"), newAppt);
+      newAppt.id = docRef.id;
+      appointmentsData.unshift(newAppt);
+      renderAppts();
+    } catch(err) {
+      console.error("Error al registrar cita manual:", err);
+    }
 
     createCalendarEvent(`Cita de Maquillaje - ${service} (${name})`, `Cita agendada manualmente.`, date, time);
     this.reset();
