@@ -1,0 +1,19 @@
+{
+  "background_color": "#ffffff",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "Angel Sánchez Maquillaje",
+  "orientation": "any",
+  "scope": "/angel-sanchez-maquillaje/",
+  "short_name": "Maquillaje",
+  "start_url": "/angel-sanchez-maquillaje/",
+  "theme_color": "#121212",
+  "icons": [
+    {
+      "src": "https://multimedia.paginasamarillas.es/adsContentSrv/225506500-1-0/ed2807f4-5fb2-4dcb-8fd9-47bca528c7ed/Logo_Angel_Sanchez.png",
+      "type": "image/png",
+      "sizes": "250x250"
+    }
+  ],
+  "id": "/angel-sanchez-maquillaje/"
+}
