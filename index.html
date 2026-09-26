@@ -297,7 +297,13 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
       <p contenteditable="false" id="editableGalleryDesc" onblur="saveSectionText('galleryDesc', this.textContent)">Filtra por categoría o presiona cualquier imagen para ampliarla a pantalla completa.</p>
     </div>
 
-    <div class="gallery-filter" id="galleryFilters"></div>
+    <div class="gallery-filter">
+      <button class="filter-btn active" onclick="filterGallery('Todas', this)">Todas</button>
+      <button class="filter-btn" onclick="filterGallery('Novias', this)">Novias</button>
+      <button class="filter-btn" onclick="filterGallery('Social', this)">Social</button>
+      <button class="filter-btn" onclick="filterGallery('Editorial', this)">Editorial</button>
+      <button class="filter-btn" onclick="filterGallery('Glamour', this)">Glamour</button>
+    </div>
 
     <div class="admin-panel admin-only hidden" id="adminPanel">
       <p><strong>1. Gestión de Carrusel de Portada:</strong></p>
@@ -508,12 +514,34 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
 
   window.db = db;
   window.storage = storage;
-  window.firestoreModules = { doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc, deleteDoc, query, where, onSnapshot };
+  window.firestoreModules = { doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc, deleteDoc, query, where };
   window.storageModules = { ref, uploadBytes, getDownloadURL, deleteObject };
+
+  // Escucha en tiempo real de TODA la colección "gallery" (carrusel + las 4 categorías).
+  // Antes solo se leía una vez al cargar o al subir/borrar desde la misma pestaña,
+  // por eso una categoría subida en otra sesión no aparecía sin recargar.
+  onSnapshot(collection(db, "gallery"), (snap) => {
+    const docs = [];
+    snap.forEach(d => docs.push({ id: d.id, ...d.data() }));
+    if (typeof window.applyGallerySnapshot === 'function') {
+      window.applyGallerySnapshot(docs);
+    }
+  }, (err) => console.error("Error de sincronización en tiempo real de la galería:", err));
 
   if (typeof window.initAppFromCloud === 'function') {
     window.initAppFromCloud();
   }
+</script>
+
+<script>
+window.applyGallerySnapshot = function(docs){
+  if(!docs) return;
+  if(docs.length === 0) return; // evita borrar los defaults mientras se siembran por primera vez
+  siteData.heroImages = docs.filter(item => item.type === 'hero').map(item => item.src);
+  siteData.gallery = docs.filter(item => item.type !== 'hero');
+  if (typeof renderCarousel === 'function') renderCarousel();
+  if (typeof renderGallery === 'function') renderGallery();
+};
 </script>
 
 <script>
@@ -564,6 +592,7 @@ async function initAppFromCloud(){
   try {
     const { doc, getDoc, setDoc, collection, getDocs } = window.firestoreModules;
     
+    // 1. Textos y Config General en colección "config", documento "texts"
     const configRef = doc(window.db, "config", "texts");
     const configSnap = await getDoc(configRef);
     if(configSnap.exists()){
@@ -572,18 +601,7 @@ async function initAppFromCloud(){
       await setDoc(configRef, {});
     }
 
-    // Compatibilidad con la estructura que ya tienes en Firestore:
-    // settings/mainConfig contiene gallery y heroImages como arreglos.
-    // Se leen aquí para no perder las imágenes que ya están guardadas.
-    const mainConfigRef = doc(window.db, "settings", "mainConfig");
-    const mainConfigSnap = await getDoc(mainConfigRef);
-    const mainConfig = mainConfigSnap.exists() ? mainConfigSnap.data() : {};
-
-    // Normaliza una sola vez la información antigua de settings/mainConfig
-    // hacia colecciones limpias, con IDs estables y orden explícito.
-    // Esto evita duplicados y evita depender del orden interno de Firestore.
-    await normalizeMainConfigToCollections(mainConfig);
-
+    // 2. Servicios desde colección "services"
     const servicesCol = collection(window.db, "services");
     const servicesSnap = await getDocs(servicesCol);
     siteData.services = [];
@@ -597,6 +615,7 @@ async function initAppFromCloud(){
       }
     }
 
+    // 3. Galería y Carrusel desde colección "gallery" (separados por type: 'hero' o 'gallery')
     const galleryCol = collection(window.db, "gallery");
     const gallerySnap = await getDocs(galleryCol);
     let cloudGallery = [];
@@ -604,24 +623,8 @@ async function initAppFromCloud(){
       cloudGallery.push({ id: d.id, ...d.data() });
     });
 
-    // La colección gallery de Firestore es la fuente de verdad para la galería.
-    // Así, al agregar o eliminar una imagen, la página refleja exactamente lo
-    // que existe en Firebase y no vuelve a mostrar una versión antigua de mainConfig.
-    const mainGallery = Array.isArray(mainConfig.gallery) ? mainConfig.gallery : [];
-    const mainHeroImages = Array.isArray(mainConfig.heroImages) ? mainConfig.heroImages : [];
-
-    if(cloudGallery.length > 0){
-      siteData.heroImages = cloudGallery.filter(item => item.type === 'hero').map(item => item.src);
-      siteData.gallery = cloudGallery.filter(item => item.type !== 'hero').sort((a,b) => (a.order ?? 999999) - (b.order ?? 999999));
-    } else if(mainGallery.length > 0 || mainHeroImages.length > 0){
-      // Compatibilidad inicial con instalaciones antiguas que todavía solo
-      // tienen imágenes en settings/mainConfig.
-      siteData.heroImages = mainHeroImages;
-      siteData.gallery = mainGallery.map((item, index) => ({
-        id: item.id || `mainConfig-gallery-${index}`,
-        ...item
-      }));
-    } else {
+    if(cloudGallery.length === 0){
+      // Inicializar por defecto
       for(const h of defaultHeroImages){
         await addDoc(galleryCol, { src: h, type: 'hero' });
       }
@@ -632,25 +635,20 @@ async function initAppFromCloud(){
       }
       siteData.heroImages = defaultHeroImages;
       siteData.gallery = seededGallery;
+    } else {
+      siteData.heroImages = cloudGallery.filter(item => item.type === 'hero').map(item => item.src);
+      siteData.gallery = cloudGallery.filter(item => item.type !== 'hero');
     }
 
-    // Si mainConfig también contiene secciones personalizadas, las dejamos
-    // disponibles como respaldo de la colección customSections.
-    const mainCustomSections = Array.isArray(mainConfig.customSections) ? mainConfig.customSections : [];
-
+    // 4. Secciones Personalizadas desde colección "customSections"
     const customCol = collection(window.db, "customSections");
     const customSnap = await getDocs(customCol);
     siteData.customSections = [];
     customSnap.forEach(d => {
       siteData.customSections.push({ id: d.id, ...d.data() });
     });
-    if(siteData.customSections.length === 0 && mainCustomSections.length > 0){
-      siteData.customSections = mainCustomSections.map((item, index) => ({
-        id: item.id || `mainConfig-section-${index}`,
-        ...item
-      }));
-    }
 
+    // 5. Reseñas desde colección "reviews"
     const reviewsCol = collection(window.db, "reviews");
     const reviewsSnap = await getDocs(reviewsCol);
     siteData.reviews = [];
@@ -664,6 +662,7 @@ async function initAppFromCloud(){
       }
     }
 
+    // 6. Citas desde colección "appointments"
     const apptsCol = collection(window.db, "appointments");
     const apptsSnap = await getDocs(apptsCol);
     appointmentsData = [];
@@ -676,167 +675,8 @@ async function initAppFromCloud(){
   }
   renderAll();
   checkUserSessionModal();
-
-  // Después de la carga inicial, queda escuchando cambios de Firebase.
-  // Así no es necesario recargar la página en ningún dispositivo.
-  startRealtimeSync();
 }
 window.initAppFromCloud = initAppFromCloud;
-
-// Migra/normaliza los datos existentes de settings/mainConfig una sola vez.
-// No toca appointments ni users. Los documentos reciben IDs estables y un
-// campo order para que siempre se muestren en el mismo orden.
-async function normalizeMainConfigToCollections(mainConfig){
-  if(!window.db || !mainConfig || typeof mainConfig !== 'object') return;
-
-  const { doc, setDoc, getDoc, collection, getDocs, deleteDoc } = window.firestoreModules;
-  const migrationRef = doc(window.db, "settings", "mainConfigMigration");
-  const migrationSnap = await getDoc(migrationRef);
-  if(migrationSnap.exists() && migrationSnap.data()?.version === 1) return;
-
-  const syncArray = async (collectionName, items, mapper) => {
-    if(!Array.isArray(items) || items.length === 0) return;
-    const colRef = collection(window.db, collectionName);
-    const oldSnap = await getDocs(colRef);
-
-    // Limpia únicamente la colección de contenido que se está normalizando.
-    // No elimina citas, usuarios ni archivos de Storage.
-    for(const d of oldSnap.docs){
-      await deleteDoc(d.ref);
-    }
-
-    for(let i = 0; i < items.length; i++){
-      const raw = items[i] || {};
-      const data = mapper(raw, i);
-      await setDoc(doc(window.db, collectionName, `${collectionName}_${String(i + 1).padStart(4,'0')}`), data);
-    }
-  };
-
-  await syncArray('gallery', mainConfig.gallery, (item, i) => ({
-    ...item,
-    type: item.type || 'gallery',
-    order: i + 1
-  }));
-
-  await syncArray('customSections', mainConfig.customSections, (item, i) => ({
-    ...item,
-    order: i + 1
-  }));
-
-  // Si en mainConfig existen estas listas, también quedan normalizadas.
-  await syncArray('services', mainConfig.services, (item, i) => ({
-    ...item,
-    order: i + 1
-  }));
-
-  await syncArray('reviews', mainConfig.reviews, (item, i) => ({
-    ...item,
-    order: i + 1
-  }));
-
-  await setDoc(migrationRef, { version: 1, completedAt: new Date().toISOString() });
-}
-
-// Sincronización en tiempo real con Firestore.
-// Mantiene la interfaz actual y actualiza automáticamente todos los dispositivos
-// cuando el administrador cambia información en Firebase.
-let realtimeUnsubscribers = [];
-
-function startRealtimeSync(){
-  if(!window.db || !window.firestoreModules) return;
-
-  // Evita crear listeners duplicados si initAppFromCloud() se ejecuta otra vez.
-  realtimeUnsubscribers.forEach(unsub => {
-    try { unsub(); } catch(e) {}
-  });
-  realtimeUnsubscribers = [];
-
-  const { doc, collection, onSnapshot } = window.firestoreModules;
-
-  const listen = (target, callback, label) => {
-    try {
-      const unsub = onSnapshot(target, callback, (error) => {
-        console.error(`Error en sincronización ${label}:`, error);
-      });
-      realtimeUnsubscribers.push(unsub);
-    } catch(e) {
-      console.error(`No se pudo iniciar sincronización ${label}:`, e);
-    }
-  };
-
-  // Textos editables del sitio.
-  listen(doc(window.db, "config", "texts"), snap => {
-    if(snap.exists()){
-      siteData.texts = snap.data();
-      loadSectionTexts();
-    }
-  }, "textos");
-
-  // Servicios y precios.
-  listen(collection(window.db, "services"), snap => {
-    siteData.services = snap.docs.map(d => ({ id:d.id, ...d.data() })).sort((a,b) => (a.order ?? 999999) - (b.order ?? 999999));
-    renderServices();
-    renderFinancialStats();
-  }, "servicios");
-
-  // Carrusel + galería en tiempo real. Firestore es la fuente de verdad.
-  // También actualizamos cuando la colección queda vacía, por ejemplo después
-  // de eliminar la última imagen.
-  listen(collection(window.db, "gallery"), snap => {
-    const items = snap.docs.map(d => ({ id:d.id, ...d.data() }));
-    siteData.heroImages = items.filter(item => item.type === 'hero').map(item => item.src);
-    siteData.gallery = items
-      .filter(item => item.type !== 'hero')
-      .sort((a,b) => (a.order ?? 999999) - (b.order ?? 999999));
-    renderCarousel();
-    renderGalleryFilters();
-    renderGallery();
-  }, "galería");
-
-  listen(doc(window.db, "settings", "mainConfig"), snap => {
-    if(!snap.exists()) return;
-    const data = snap.data() || {};
-    const mainGallery = Array.isArray(data.gallery) ? data.gallery : [];
-    const mainHeroImages = Array.isArray(data.heroImages) ? data.heroImages : [];
-
-    // No sobrescribimos la galería desde mainConfig. La colección gallery
-    // mantiene la sincronización en vivo de altas y bajas de imágenes.
-
-    if(Array.isArray(data.customSections) && data.customSections.length > 0){
-      siteData.customSections = data.customSections.map((item, index) => ({
-        id: item.id || `mainConfig-section-${index}`,
-        ...item
-      }));
-      renderCustomSections();
-    }
-  }, "settings/mainConfig");
-
-  // Secciones personalizadas.
-  listen(collection(window.db, "customSections"), snap => {
-    siteData.customSections = snap.docs.map(d => ({ id:d.id, ...d.data() })).sort((a,b) => (a.order ?? 999999) - (b.order ?? 999999));
-    renderCustomSections();
-  }, "secciones");
-
-  // Reseñas.
-  listen(collection(window.db, "reviews"), snap => {
-    siteData.reviews = snap.docs.map(d => ({ id:d.id, ...d.data() })).sort((a,b) => (a.order ?? 999999) - (b.order ?? 999999));
-    renderReviews();
-  }, "reseñas");
-
-  // Citas: este es el listener importante para que el estado
-  // cambiado por el administrador aparezca en tiempo real al cliente.
-  listen(collection(window.db, "appointments"), snap => {
-    appointmentsData = snap.docs.map(d => ({ id:d.id, ...d.data() }));
-    renderAppts();
-    renderConfirmed();
-
-    // Si el usuario tiene abierto su perfil, actualiza también sus contadores.
-    if(document.getElementById('userProfileModal')?.classList.contains('active')){
-      openProfileModal();
-    }
-  }, "citas");
-}
-
 
 async function saveSectionText(key, text){
   siteData.texts[key] = text.trim();
@@ -853,7 +693,6 @@ function renderAll(){
   loadSectionTexts();
   renderCarousel();
   renderServices();
-  renderGalleryFilters();
   renderGallery();
   renderCustomSections();
   renderReviews();
@@ -1057,6 +896,8 @@ function renderHeroManageList(){
   const container = document.getElementById('heroManageList');
   if(!container) return;
   container.innerHTML = '';
+  
+  // Buscar items tipo 'hero' en Firestore
   loadHeroDocsFromCloud();
 }
 
@@ -1236,47 +1077,9 @@ async function removeService(id){
   }
 }
 
-const DEFAULT_GALLERY_CATEGORIES = ['Novias', 'Social', 'Editorial', 'Glamour'];
-
-function getGalleryCategories(){
-  const categories = [...DEFAULT_GALLERY_CATEGORIES];
-  siteData.gallery.forEach(item => {
-    const category = String(item?.category || '').trim();
-    if(category && !categories.some(c => c.toLowerCase() === category.toLowerCase())){
-      categories.push(category);
-    }
-  });
-  return categories;
-}
-
-function renderGalleryFilters(){
-  const filters = document.getElementById('galleryFilters');
-  if(!filters) return;
-
-  const categories = getGalleryCategories();
-  if(currentCategory !== 'Todas' && !categories.some(c => c.toLowerCase() === currentCategory.toLowerCase())){
-    currentCategory = 'Todas';
-  }
-
-  filters.innerHTML = '';
-  const allBtn = document.createElement('button');
-  allBtn.className = `filter-btn ${currentCategory === 'Todas' ? 'active' : ''}`;
-  allBtn.textContent = 'Todas';
-  allBtn.onclick = () => filterGallery('Todas', allBtn);
-  filters.appendChild(allBtn);
-
-  categories.forEach(category => {
-    const btn = document.createElement('button');
-    btn.className = `filter-btn ${currentCategory.toLowerCase() === category.toLowerCase() ? 'active' : ''}`;
-    btn.textContent = category;
-    btn.onclick = () => filterGallery(category, btn);
-    filters.appendChild(btn);
-  });
-}
-
 function filterGallery(category, btn){
   currentCategory = category;
-  document.querySelectorAll('.gallery-filter .filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   if(btn) btn.classList.add('active');
   renderGallery();
 }
@@ -1285,12 +1088,10 @@ function renderGallery(){
   const grid = document.getElementById('galleryGrid');
   if(!grid) return;
   grid.innerHTML = '';
-
-  const galleryToRender = siteData.gallery.length > 0 ? siteData.gallery : [];
-  const filtered = currentCategory === 'Todas'
-    ? galleryToRender
-    : galleryToRender.filter(item => item && String(item.category || '').toLowerCase() === currentCategory.toLowerCase());
-
+  
+  const galleryToRender = siteData.gallery.length > 0 ? siteData.gallery : defaultGallery;
+  const filtered = currentCategory === 'Todas' ? galleryToRender : galleryToRender.filter(item => item && item.category === currentCategory);
+  
   if(filtered.length === 0){
     grid.innerHTML = `<div style="grid-column:span 4; padding:20px 0; color:var(--ink-dim);">No hay fotos en la categoría "${currentCategory}".</div>`;
     return;
@@ -1298,8 +1099,7 @@ function renderGallery(){
 
   filtered.forEach((item) => {
     if(!item || !item.src) return;
-    const div = document.createElement('div');
-    div.className = 'gallery-item';
+    const div = document.createElement('div'); div.className = 'gallery-item';
     div.onclick = (e) => { if(!e.target.classList.contains('del')) openModal(item.src); };
     div.innerHTML = `<img src="${item.src}" alt="${item.category || 'Galería'}"><span class="tag">${item.category || 'General'}</span>${(isAdmin && item.id) ? `<button class="del" onclick="removeGalleryImage('${item.id}')">✕</button>` : ''}`;
     grid.appendChild(div);
@@ -1317,6 +1117,7 @@ async function removeGalleryImage(id){
     if(data && data.storagePath && window.storage){
       try{ await window.storageModules.deleteObject(window.storageModules.ref(window.storage, data.storagePath)); }catch(e){}
     }
+    initAppFromCloud();
   } catch(e) {
     console.error("Error al eliminar imagen de galería:", e);
     alert('No se pudo eliminar la imagen.');
@@ -1717,6 +1518,7 @@ if(manualForm){
       renderAppts();
     } catch(err) {
       console.error("Error al registrar cita manual:", err);
+
     }
 
     createCalendarEvent(`Cita de Maquillaje - ${service} (${name})`, `Cita agendada manualmente.`, date, time);
