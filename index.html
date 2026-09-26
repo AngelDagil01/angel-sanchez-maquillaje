@@ -561,13 +561,13 @@ let siteData = {
 
 let appointmentsData = [];
 
-// --- Modelo de galería: una colección por categoría + una para el carrusel ---
+// --- Modelo de galería en columnas/colecciones separadas ---
 const GALLERY_CATEGORIES = ['Novias','Social','Editorial','Glamour'];
 const HERO_COLLECTION = 'heroCarousel';
 function galleryCollectionName(cat){ return 'gallery_' + cat; }
 
-let heroDocs = [];                 // [{id, src}]
-let galleryByCategory = { Novias:[], Social:[], Editorial:[], Glamour:[] }; // cada una: [{id, src, category}]
+let heroDocs = [];                 
+let galleryByCategory = { Novias:[], Social:[], Editorial:[], Glamour:[] }; 
 let galleryRealtimeReady = false;
 
 function rebuildSiteDataFromRealtime(){
@@ -582,25 +582,24 @@ function setupGalleryRealtime(){
   galleryRealtimeReady = true;
   const { collection, onSnapshot } = window.firestoreModules;
 
+  // Escuchar carrusel de portada
   onSnapshot(collection(window.db, HERO_COLLECTION), snap => {
     heroDocs = [];
     snap.forEach(d => heroDocs.push({ id: d.id, ...d.data() }));
     rebuildSiteDataFromRealtime();
-  }, err => console.error('Error en tiempo real del carrusel:', err));
+  }, err => console.error('Error en carrusel:', err));
 
+  // Escuchar cada categoría en su propia colección/columna
   GALLERY_CATEGORIES.forEach(cat => {
     onSnapshot(collection(window.db, galleryCollectionName(cat)), snap => {
       const arr = [];
       snap.forEach(d => arr.push({ id: d.id, category: cat, ...d.data() }));
       galleryByCategory[cat] = arr;
       rebuildSiteDataFromRealtime();
-    }, err => console.error(`Error en tiempo real de la categoría ${cat}:`, err));
+    }, err => console.error(`Error en categoría ${cat}:`, err));
   });
 }
 
-// Reduce y comprime la imagen en el navegador antes de guardarla, para que quepa
-// muy por debajo del límite de 1MB por documento que tiene Firestore (necesario
-// porque Firebase Storage requiere el plan Blaze, no disponible en el plan Spark/gratis).
 function compressImageFile(file, maxDim = 1400, quality = 0.72){
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -619,7 +618,6 @@ function compressImageFile(file, maxDim = 1400, quality = 0.72){
         canvas.getContext('2d').drawImage(img, 0, 0, width, height);
         let q = quality;
         let dataUrl = canvas.toDataURL('image/jpeg', q);
-        // Si aún pesa demasiado para un documento de Firestore, se reduce más la calidad.
         let attempts = 0;
         while(dataUrl.length > 900000 && attempts < 4){
           q = Math.max(0.35, q - 0.15);
@@ -640,7 +638,6 @@ async function initAppFromCloud(){
   try {
     const { doc, getDoc, setDoc, collection, getDocs, addDoc } = window.firestoreModules;
     
-    // 1. Textos y Config General en colección "config", documento "texts"
     const configRef = doc(window.db, "config", "texts");
     const configSnap = await getDoc(configRef);
     if(configSnap.exists()){
@@ -649,7 +646,6 @@ async function initAppFromCloud(){
       await setDoc(configRef, {});
     }
 
-    // 2. Servicios desde colección "services"
     const servicesCol = collection(window.db, "services");
     const servicesSnap = await getDocs(servicesCol);
     siteData.services = [];
@@ -663,7 +659,6 @@ async function initAppFromCloud(){
       }
     }
 
-    // 3. Carrusel (colección "heroCarousel") y Galería (una colección por categoría: gallery_Novias, gallery_Social, gallery_Editorial, gallery_Glamour)
     const heroCol = collection(window.db, HERO_COLLECTION);
     const heroSnap = await getDocs(heroCol);
     if(heroSnap.empty){
@@ -685,7 +680,6 @@ async function initAppFromCloud(){
 
     setupGalleryRealtime();
 
-    // 4. Secciones Personalizadas desde colección "customSections"
     const customCol = collection(window.db, "customSections");
     const customSnap = await getDocs(customCol);
     siteData.customSections = [];
@@ -693,7 +687,6 @@ async function initAppFromCloud(){
       siteData.customSections.push({ id: d.id, ...d.data() });
     });
 
-    // 5. Reseñas desde colección "reviews"
     const reviewsCol = collection(window.db, "reviews");
     const reviewsSnap = await getDocs(reviewsCol);
     siteData.reviews = [];
@@ -707,7 +700,6 @@ async function initAppFromCloud(){
       }
     }
 
-    // 6. Citas desde colección "appointments"
     const apptsCol = collection(window.db, "appointments");
     const apptsSnap = await getDocs(apptsCol);
     appointmentsData = [];
@@ -1522,7 +1514,6 @@ if(manualForm){
       renderAppts();
     } catch(err) {
       console.error("Error al registrar cita manual:", err);
-
     }
 
     createCalendarEvent(`Cita de Maquillaje - ${service} (${name})`, `Cita agendada manualmente.`, date, time);
