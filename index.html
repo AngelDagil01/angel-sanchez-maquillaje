@@ -297,13 +297,7 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
       <p contenteditable="false" id="editableGalleryDesc" onblur="saveSectionText('galleryDesc', this.textContent)">Filtra por categoría o presiona cualquier imagen para ampliarla a pantalla completa.</p>
     </div>
 
-    <div class="gallery-filter">
-      <button class="filter-btn active" onclick="filterGallery('Todas', this)">Todas</button>
-      <button class="filter-btn" onclick="filterGallery('Novias', this)">Novias</button>
-      <button class="filter-btn" onclick="filterGallery('Social', this)">Social</button>
-      <button class="filter-btn" onclick="filterGallery('Editorial', this)">Editorial</button>
-      <button class="filter-btn" onclick="filterGallery('Glamour', this)">Glamour</button>
-    </div>
+    <div class="gallery-filter" id="galleryFilters"></div>
 
     <div class="admin-panel admin-only hidden" id="adminPanel">
       <p><strong>1. Gestión de Carrusel de Portada:</strong></p>
@@ -610,20 +604,23 @@ async function initAppFromCloud(){
       cloudGallery.push({ id: d.id, ...d.data() });
     });
 
-    // Primero usamos los datos de settings/mainConfig si existen, porque
-    // esa es la estructura donde ya están almacenadas tus imágenes actuales.
+    // La colección gallery de Firestore es la fuente de verdad para la galería.
+    // Así, al agregar o eliminar una imagen, la página refleja exactamente lo
+    // que existe en Firebase y no vuelve a mostrar una versión antigua de mainConfig.
     const mainGallery = Array.isArray(mainConfig.gallery) ? mainConfig.gallery : [];
     const mainHeroImages = Array.isArray(mainConfig.heroImages) ? mainConfig.heroImages : [];
 
-    if(mainGallery.length > 0 || mainHeroImages.length > 0){
+    if(cloudGallery.length > 0){
+      siteData.heroImages = cloudGallery.filter(item => item.type === 'hero').map(item => item.src);
+      siteData.gallery = cloudGallery.filter(item => item.type !== 'hero').sort((a,b) => (a.order ?? 999999) - (b.order ?? 999999));
+    } else if(mainGallery.length > 0 || mainHeroImages.length > 0){
+      // Compatibilidad inicial con instalaciones antiguas que todavía solo
+      // tienen imágenes en settings/mainConfig.
       siteData.heroImages = mainHeroImages;
       siteData.gallery = mainGallery.map((item, index) => ({
         id: item.id || `mainConfig-gallery-${index}`,
         ...item
       }));
-    } else if(cloudGallery.length > 0){
-      siteData.heroImages = cloudGallery.filter(item => item.type === 'hero').map(item => item.src);
-      siteData.gallery = cloudGallery.filter(item => item.type !== 'hero');
     } else {
       for(const h of defaultHeroImages){
         await addDoc(galleryCol, { src: h, type: 'hero' });
@@ -782,17 +779,18 @@ function startRealtimeSync(){
     renderFinancialStats();
   }, "servicios");
 
-  // Carrusel + galería.
-  // Soporta tanto la colección gallery como tu estructura existente
-  // settings/mainConfig.gallery + settings/mainConfig.heroImages.
+  // Carrusel + galería en tiempo real. Firestore es la fuente de verdad.
+  // También actualizamos cuando la colección queda vacía, por ejemplo después
+  // de eliminar la última imagen.
   listen(collection(window.db, "gallery"), snap => {
     const items = snap.docs.map(d => ({ id:d.id, ...d.data() }));
-    if(items.length > 0){
-      siteData.heroImages = items.filter(item => item.type === 'hero').map(item => item.src);
-      siteData.gallery = items.filter(item => item.type !== 'hero').sort((a,b) => (a.order ?? 999999) - (b.order ?? 999999));
-      renderCarousel();
-      renderGallery();
-    }
+    siteData.heroImages = items.filter(item => item.type === 'hero').map(item => item.src);
+    siteData.gallery = items
+      .filter(item => item.type !== 'hero')
+      .sort((a,b) => (a.order ?? 999999) - (b.order ?? 999999));
+    renderCarousel();
+    renderGalleryFilters();
+    renderGallery();
   }, "galería");
 
   listen(doc(window.db, "settings", "mainConfig"), snap => {
@@ -801,17 +799,8 @@ function startRealtimeSync(){
     const mainGallery = Array.isArray(data.gallery) ? data.gallery : [];
     const mainHeroImages = Array.isArray(data.heroImages) ? data.heroImages : [];
 
-    // Si mainConfig contiene imágenes, tienen prioridad para mostrar
-    // exactamente lo que ya existe en tu base de datos.
-    if(mainGallery.length > 0 || mainHeroImages.length > 0){
-      siteData.heroImages = mainHeroImages;
-      siteData.gallery = mainGallery.map((item, index) => ({
-        id: item.id || `mainConfig-gallery-${index}`,
-        ...item
-      }));
-      renderCarousel();
-      renderGallery();
-    }
+    // No sobrescribimos la galería desde mainConfig. La colección gallery
+    // mantiene la sincronización en vivo de altas y bajas de imágenes.
 
     if(Array.isArray(data.customSections) && data.customSections.length > 0){
       siteData.customSections = data.customSections.map((item, index) => ({
@@ -864,6 +853,7 @@ function renderAll(){
   loadSectionTexts();
   renderCarousel();
   renderServices();
+  renderGalleryFilters();
   renderGallery();
   renderCustomSections();
   renderReviews();
@@ -1246,9 +1236,47 @@ async function removeService(id){
   }
 }
 
+const DEFAULT_GALLERY_CATEGORIES = ['Novias', 'Social', 'Editorial', 'Glamour'];
+
+function getGalleryCategories(){
+  const categories = [...DEFAULT_GALLERY_CATEGORIES];
+  siteData.gallery.forEach(item => {
+    const category = String(item?.category || '').trim();
+    if(category && !categories.some(c => c.toLowerCase() === category.toLowerCase())){
+      categories.push(category);
+    }
+  });
+  return categories;
+}
+
+function renderGalleryFilters(){
+  const filters = document.getElementById('galleryFilters');
+  if(!filters) return;
+
+  const categories = getGalleryCategories();
+  if(currentCategory !== 'Todas' && !categories.some(c => c.toLowerCase() === currentCategory.toLowerCase())){
+    currentCategory = 'Todas';
+  }
+
+  filters.innerHTML = '';
+  const allBtn = document.createElement('button');
+  allBtn.className = `filter-btn ${currentCategory === 'Todas' ? 'active' : ''}`;
+  allBtn.textContent = 'Todas';
+  allBtn.onclick = () => filterGallery('Todas', allBtn);
+  filters.appendChild(allBtn);
+
+  categories.forEach(category => {
+    const btn = document.createElement('button');
+    btn.className = `filter-btn ${currentCategory.toLowerCase() === category.toLowerCase() ? 'active' : ''}`;
+    btn.textContent = category;
+    btn.onclick = () => filterGallery(category, btn);
+    filters.appendChild(btn);
+  });
+}
+
 function filterGallery(category, btn){
   currentCategory = category;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.gallery-filter .filter-btn').forEach(b => b.classList.remove('active'));
   if(btn) btn.classList.add('active');
   renderGallery();
 }
@@ -1257,10 +1285,12 @@ function renderGallery(){
   const grid = document.getElementById('galleryGrid');
   if(!grid) return;
   grid.innerHTML = '';
-  
-  const galleryToRender = siteData.gallery.length > 0 ? siteData.gallery : defaultGallery;
-  const filtered = currentCategory === 'Todas' ? galleryToRender : galleryToRender.filter(item => item && item.category === currentCategory);
-  
+
+  const galleryToRender = siteData.gallery.length > 0 ? siteData.gallery : [];
+  const filtered = currentCategory === 'Todas'
+    ? galleryToRender
+    : galleryToRender.filter(item => item && String(item.category || '').toLowerCase() === currentCategory.toLowerCase());
+
   if(filtered.length === 0){
     grid.innerHTML = `<div style="grid-column:span 4; padding:20px 0; color:var(--ink-dim);">No hay fotos en la categoría "${currentCategory}".</div>`;
     return;
@@ -1268,7 +1298,8 @@ function renderGallery(){
 
   filtered.forEach((item) => {
     if(!item || !item.src) return;
-    const div = document.createElement('div'); div.className = 'gallery-item';
+    const div = document.createElement('div');
+    div.className = 'gallery-item';
     div.onclick = (e) => { if(!e.target.classList.contains('del')) openModal(item.src); };
     div.innerHTML = `<img src="${item.src}" alt="${item.category || 'Galería'}"><span class="tag">${item.category || 'General'}</span>${(isAdmin && item.id) ? `<button class="del" onclick="removeGalleryImage('${item.id}')">✕</button>` : ''}`;
     grid.appendChild(div);
@@ -1286,7 +1317,6 @@ async function removeGalleryImage(id){
     if(data && data.storagePath && window.storage){
       try{ await window.storageModules.deleteObject(window.storageModules.ref(window.storage, data.storagePath)); }catch(e){}
     }
-    initAppFromCloud();
   } catch(e) {
     console.error("Error al eliminar imagen de galería:", e);
     alert('No se pudo eliminar la imagen.');
