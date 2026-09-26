@@ -634,11 +634,11 @@ footer p:hover {
 </script>
 
 <script>
+const ADMIN_PASSWORD = '2001';
 let isAdmin = sessionStorage.getItem('isAdmin') === '1';
 let currentCategory = 'Todas';
 let currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
 let accountPromptDismissed = false;
-let adminPinConfigured = null; // PIN de administrador cargado de manera dinámica desde Firestore
 
 const defaultHeroImages = [
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="100%" height="100%" fill="%231a1a1a"/><circle cx="600" cy="400" r="220" fill="none" stroke="%23d4af37" stroke-width="2"/><text x="50%" y="80%" font-family="Georgia" font-size="36" fill="%23d4af37" text-anchor="middle">Angel Sanchez — Portada 1</text></svg>',
@@ -692,32 +692,11 @@ function rebuildSiteDataFromRealtime(){
   if (typeof renderGallery === 'function') renderGallery();
 }
 
-// Cargar el PIN seguro de administrador desde Firestore (config/admin)
-async function fetchAdminPin() {
-  if(!window.db) return;
-  try {
-    const { doc, getDoc } = window.firestoreModules;
-    const docRef = doc(window.db, "config", "admin");
-    const docSnap = await getDoc(docRef);
-    if(docSnap.exists()){
-      adminPinConfigured = docSnap.data().pin;
-    } else {
-      // Si no existe aún en Firestore, creamos uno por defecto de forma segura
-      await window.firestoreModules.setDoc(docRef, { pin: '2001' });
-      adminPinConfigured = '2001';
-    }
-  } catch(e) {
-    console.error("Error al cargar credenciales de administrador:", e);
-  }
-}
-
 function setupCloudRealtime(){
   if(cloudRealtimeReady || !window.db) return;
   cloudRealtimeReady = true;
 
   const { doc, collection, onSnapshot } = window.firestoreModules;
-
-  fetchAdminPin();
 
   onSnapshot(doc(window.db, 'config', 'texts'), snap => {
     siteData.texts = snap.exists() ? snap.data() : {};
@@ -1137,32 +1116,14 @@ function showSlide(i){
 function moveSlide(dir){ showSlide(current + dir); }
 function resetTimer(){ clearInterval(timer); timer = setInterval(() => moveSlide(1), 6000); }
 
-// Función de activación segura del modo administrador validando contra Firestore
-async function toggleAdmin(){
+function toggleAdmin(){
   if(isAdmin){
     isAdmin = false;
     sessionStorage.removeItem('isAdmin');
   } else {
     const pass = prompt('Contraseña de administrador:');
     if(pass === null) return;
-    
-    // Si el PIN no está cargado, intentamos consultarlo de inmediato en Firestore
-    if(!adminPinConfigured && window.db) {
-      try {
-        const { doc, getDoc } = window.firestoreModules;
-        const docSnap = await getDoc(doc(window.db, "config", "admin"));
-        if(docSnap.exists()) adminPinConfigured = docSnap.data().pin;
-      } catch(err) {
-        console.error(err);
-      }
-    }
-
-    const securePin = adminPinConfigured || '2001'; // Respaldo por defecto si falla la red
-
-    if(pass !== securePin){ 
-      alert('Contraseña incorrecta.'); 
-      return; 
-    }
+    if(pass !== ADMIN_PASSWORD){ alert('Contraseña incorrecta.'); return; }
     isAdmin = true;
     sessionStorage.setItem('isAdmin','1');
   }
