@@ -497,7 +497,6 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc, deleteDoc, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-  import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
   const firebaseConfig = {
       apiKey: "AIzaSyArxSYDEJW5nksY807uXWNCUD7_r1d-MY",
@@ -510,38 +509,13 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
-  const storage = getStorage(app);
 
   window.db = db;
-  window.storage = storage;
-  window.firestoreModules = { doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc, deleteDoc, query, where };
-  window.storageModules = { ref, uploadBytes, getDownloadURL, deleteObject };
-
-  // Escucha en tiempo real de TODA la colección "gallery" (carrusel + las 4 categorías).
-  // Antes solo se leía una vez al cargar o al subir/borrar desde la misma pestaña,
-  // por eso una categoría subida en otra sesión no aparecía sin recargar.
-  onSnapshot(collection(db, "gallery"), (snap) => {
-    const docs = [];
-    snap.forEach(d => docs.push({ id: d.id, ...d.data() }));
-    if (typeof window.applyGallerySnapshot === 'function') {
-      window.applyGallerySnapshot(docs);
-    }
-  }, (err) => console.error("Error de sincronización en tiempo real de la galería:", err));
+  window.firestoreModules = { doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc, deleteDoc, query, where, onSnapshot };
 
   if (typeof window.initAppFromCloud === 'function') {
     window.initAppFromCloud();
   }
-</script>
-
-<script>
-window.applyGallerySnapshot = function(docs){
-  if(!docs) return;
-  if(docs.length === 0) return; // evita borrar los defaults mientras se siembran por primera vez
-  siteData.heroImages = docs.filter(item => item.type === 'hero').map(item => item.src);
-  siteData.gallery = docs.filter(item => item.type !== 'hero');
-  if (typeof renderCarousel === 'function') renderCarousel();
-  if (typeof renderGallery === 'function') renderGallery();
-};
 </script>
 
 <script>
@@ -587,10 +561,84 @@ let siteData = {
 
 let appointmentsData = [];
 
+// --- Modelo de galería: una colección por categoría + una para el carrusel ---
+const GALLERY_CATEGORIES = ['Novias','Social','Editorial','Glamour'];
+const HERO_COLLECTION = 'heroCarousel';
+function galleryCollectionName(cat){ return 'gallery_' + cat; }
+
+let heroDocs = [];                 // [{id, src}]
+let galleryByCategory = { Novias:[], Social:[], Editorial:[], Glamour:[] }; // cada una: [{id, src, category}]
+let galleryRealtimeReady = false;
+
+function rebuildSiteDataFromRealtime(){
+  siteData.heroImages = heroDocs.map(h => h.src);
+  siteData.gallery = GALLERY_CATEGORIES.flatMap(cat => galleryByCategory[cat]);
+  if (typeof renderCarousel === 'function') renderCarousel();
+  if (typeof renderGallery === 'function') renderGallery();
+}
+
+function setupGalleryRealtime(){
+  if(galleryRealtimeReady || !window.db) return;
+  galleryRealtimeReady = true;
+  const { collection, onSnapshot } = window.firestoreModules;
+
+  onSnapshot(collection(window.db, HERO_COLLECTION), snap => {
+    heroDocs = [];
+    snap.forEach(d => heroDocs.push({ id: d.id, ...d.data() }));
+    rebuildSiteDataFromRealtime();
+  }, err => console.error('Error en tiempo real del carrusel:', err));
+
+  GALLERY_CATEGORIES.forEach(cat => {
+    onSnapshot(collection(window.db, galleryCollectionName(cat)), snap => {
+      const arr = [];
+      snap.forEach(d => arr.push({ id: d.id, category: cat, ...d.data() }));
+      galleryByCategory[cat] = arr;
+      rebuildSiteDataFromRealtime();
+    }, err => console.error(`Error en tiempo real de la categoría ${cat}:`, err));
+  });
+}
+
+// Reduce y comprime la imagen en el navegador antes de guardarla, para que quepa
+// muy por debajo del límite de 1MB por documento que tiene Firestore (necesario
+// porque Firebase Storage requiere el plan Blaze, no disponible en el plan Spark/gratis).
+function compressImageFile(file, maxDim = 1400, quality = 0.72){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('No se pudo leer el archivo'));
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('No se pudo procesar la imagen'));
+      img.onload = () => {
+        let { width, height } = img;
+        if(width > maxDim || height > maxDim){
+          if(width > height){ height = Math.round(height * maxDim / width); width = maxDim; }
+          else { width = Math.round(width * maxDim / height); height = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        let q = quality;
+        let dataUrl = canvas.toDataURL('image/jpeg', q);
+        // Si aún pesa demasiado para un documento de Firestore, se reduce más la calidad.
+        let attempts = 0;
+        while(dataUrl.length > 900000 && attempts < 4){
+          q = Math.max(0.35, q - 0.15);
+          dataUrl = canvas.toDataURL('image/jpeg', q);
+          attempts++;
+        }
+        if(dataUrl.length > 950000){ reject(new Error('La imagen sigue siendo muy pesada, intenta con una foto más liviana.')); return; }
+        resolve(dataUrl);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 async function initAppFromCloud(){
   if(!window.db) return;
   try {
-    const { doc, getDoc, setDoc, collection, getDocs } = window.firestoreModules;
+    const { doc, getDoc, setDoc, collection, getDocs, addDoc } = window.firestoreModules;
     
     // 1. Textos y Config General en colección "config", documento "texts"
     const configRef = doc(window.db, "config", "texts");
@@ -615,30 +663,27 @@ async function initAppFromCloud(){
       }
     }
 
-    // 3. Galería y Carrusel desde colección "gallery" (separados por type: 'hero' o 'gallery')
-    const galleryCol = collection(window.db, "gallery");
-    const gallerySnap = await getDocs(galleryCol);
-    let cloudGallery = [];
-    gallerySnap.forEach(d => {
-      cloudGallery.push({ id: d.id, ...d.data() });
-    });
-
-    if(cloudGallery.length === 0){
-      // Inicializar por defecto
+    // 3. Carrusel (colección "heroCarousel") y Galería (una colección por categoría: gallery_Novias, gallery_Social, gallery_Editorial, gallery_Glamour)
+    const heroCol = collection(window.db, HERO_COLLECTION);
+    const heroSnap = await getDocs(heroCol);
+    if(heroSnap.empty){
       for(const h of defaultHeroImages){
-        await addDoc(galleryCol, { src: h, type: 'hero' });
+        await addDoc(heroCol, { src: h });
       }
-      const seededGallery = [];
-      for(const g of defaultGallery){
-        const ref = await addDoc(galleryCol, g);
-        seededGallery.push({ id: ref.id, ...g });
-      }
-      siteData.heroImages = defaultHeroImages;
-      siteData.gallery = seededGallery;
-    } else {
-      siteData.heroImages = cloudGallery.filter(item => item.type === 'hero').map(item => item.src);
-      siteData.gallery = cloudGallery.filter(item => item.type !== 'hero');
     }
+
+    for(const cat of GALLERY_CATEGORIES){
+      const catCol = collection(window.db, galleryCollectionName(cat));
+      const catSnap = await getDocs(catCol);
+      if(catSnap.empty){
+        const defaultsForCat = defaultGallery.filter(g => g.category === cat);
+        for(const g of defaultsForCat){
+          await addDoc(catCol, { src: g.src });
+        }
+      }
+    }
+
+    setupGalleryRealtime();
 
     // 4. Secciones Personalizadas desde colección "customSections"
     const customCol = collection(window.db, "customSections");
@@ -896,25 +941,10 @@ function renderHeroManageList(){
   const container = document.getElementById('heroManageList');
   if(!container) return;
   container.innerHTML = '';
-  
-  // Buscar items tipo 'hero' en Firestore
-  loadHeroDocsFromCloud();
-}
-
-async function loadHeroDocsFromCloud(){
-  if(!window.db) return;
-  const { collection, getDocs, query, where } = window.firestoreModules;
-  const q = query(collection(window.db, "gallery"), where("type", "==", "hero"));
-  const snap = await getDocs(q);
-  const container = document.getElementById('heroManageList');
-  if(!container) return;
-  container.innerHTML = '';
-  
-  snap.forEach(docSnap => {
-    const data = docSnap.data();
+  heroDocs.forEach(item => {
     const thumb = document.createElement('div');
     thumb.style.cssText = 'position:relative; width:60px; height:60px; border-radius:4px; overflow:hidden; border:1px solid var(--line);';
-    thumb.innerHTML = `<img src="${data.src}" style="width:100%; height:100%; object-fit:cover;"><button onclick="removeHeroImageDoc('${docSnap.id}')" style="position:absolute; top:2px; right:2px; background:var(--wine); color:#fff; border:none; width:18px; height:18px; font-size:10px; cursor:pointer; border-radius:50%;">✕</button>`;
+    thumb.innerHTML = `<img src="${item.src}" style="width:100%; height:100%; object-fit:cover;"><button onclick="removeHeroImageDoc('${item.id}')" style="position:absolute; top:2px; right:2px; background:var(--wine); color:#fff; border:none; width:18px; height:18px; font-size:10px; cursor:pointer; border-radius:50%;">✕</button>`;
     container.appendChild(thumb);
   });
 }
@@ -922,15 +952,8 @@ async function loadHeroDocsFromCloud(){
 window.removeHeroImageDoc = async function(docId){
   if(!window.db) return;
   try {
-    const { doc, getDoc, deleteDoc } = window.firestoreModules;
-    const ref = doc(window.db, "gallery", docId);
-    const snap = await getDoc(ref);
-    const data = snap.exists() ? snap.data() : null;
-    await deleteDoc(ref);
-    if(data && data.storagePath && window.storage){
-      try{ await window.storageModules.deleteObject(window.storageModules.ref(window.storage, data.storagePath)); }catch(e){}
-    }
-    initAppFromCloud();
+    const { doc, deleteDoc } = window.firestoreModules;
+    await deleteDoc(doc(window.db, HERO_COLLECTION, docId));
   } catch(e) {
     console.error("Error al eliminar imagen de carrusel:", e);
     alert('No se pudo eliminar la imagen.');
@@ -1101,23 +1124,16 @@ function renderGallery(){
     if(!item || !item.src) return;
     const div = document.createElement('div'); div.className = 'gallery-item';
     div.onclick = (e) => { if(!e.target.classList.contains('del')) openModal(item.src); };
-    div.innerHTML = `<img src="${item.src}" alt="${item.category || 'Galería'}"><span class="tag">${item.category || 'General'}</span>${(isAdmin && item.id) ? `<button class="del" onclick="removeGalleryImage('${item.id}')">✕</button>` : ''}`;
+    div.innerHTML = `<img src="${item.src}" alt="${item.category || 'Galería'}"><span class="tag">${item.category || 'General'}</span>${(isAdmin && item.id) ? `<button class="del" onclick="removeGalleryImage('${item.id}','${item.category}')">✕</button>` : ''}`;
     grid.appendChild(div);
   });
 }
 
-async function removeGalleryImage(id){
+async function removeGalleryImage(id, category){
   if(!window.db) return;
   try {
-    const { doc, getDoc, deleteDoc } = window.firestoreModules;
-    const ref = doc(window.db, "gallery", id);
-    const snap = await getDoc(ref);
-    const data = snap.exists() ? snap.data() : null;
-    await deleteDoc(ref);
-    if(data && data.storagePath && window.storage){
-      try{ await window.storageModules.deleteObject(window.storageModules.ref(window.storage, data.storagePath)); }catch(e){}
-    }
-    initAppFromCloud();
+    const { doc, deleteDoc } = window.firestoreModules;
+    await deleteDoc(doc(window.db, galleryCollectionName(category), id));
   } catch(e) {
     console.error("Error al eliminar imagen de galería:", e);
     alert('No se pudo eliminar la imagen.');
@@ -1235,16 +1251,6 @@ function renderCustomSections(){
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  async function uploadImageToStorage(file, folder){
-    if(!window.storage) throw new Error('Storage no disponible');
-    const { ref, uploadBytes, getDownloadURL } = window.storageModules;
-    const path = `${folder}/${Date.now()}_${file.name}`;
-    const sref = ref(window.storage, path);
-    await uploadBytes(sref, file);
-    const url = await getDownloadURL(sref);
-    return { url, path };
-  }
-
   const heroFileIn = document.getElementById('heroFileInput');
   if(heroFileIn){
     heroFileIn.addEventListener('change', function(e){
@@ -1253,10 +1259,9 @@ document.addEventListener('DOMContentLoaded', () => {
       files.forEach(async file => {
         try{
           if(!window.db) throw new Error('Base de datos no conectada');
-          const { url, path } = await uploadImageToStorage(file, 'hero');
+          const dataUrl = await compressImageFile(file);
           const { collection, addDoc } = window.firestoreModules;
-          await addDoc(collection(window.db, "gallery"), { src: url, storagePath: path, type: 'hero' });
-          initAppFromCloud();
+          await addDoc(collection(window.db, HERO_COLLECTION), { src: dataUrl });
         }catch(err){
           console.error("Error al subir foto del carrusel:", err);
           alert('No se pudo subir la foto al carrusel: ' + (err.message || err));
@@ -1274,10 +1279,9 @@ document.addEventListener('DOMContentLoaded', () => {
       files.forEach(async file => {
         try{
           if(!window.db) throw new Error('Base de datos no conectada');
-          const { url, path } = await uploadImageToStorage(file, 'gallery');
+          const dataUrl = await compressImageFile(file);
           const { collection, addDoc } = window.firestoreModules;
-          await addDoc(collection(window.db, "gallery"), { src: url, storagePath: path, category: cat, type: 'gallery' });
-          initAppFromCloud();
+          await addDoc(collection(window.db, galleryCollectionName(cat)), { src: dataUrl });
         }catch(err){
           console.error("Error al subir foto de la galería:", err);
           alert('No se pudo subir la foto a la galería: ' + (err.message || err));
