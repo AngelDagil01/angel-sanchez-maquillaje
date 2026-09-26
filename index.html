@@ -37,15 +37,11 @@ body.is-admin [contenteditable="true"]{border-bottom:1px dashed var(--gold); bac
 body.is-admin [contenteditable="true"]:focus{outline:2px solid var(--gold); background:#262626;}
 
 header.nav{position:fixed; top:0; left:0; right:0; z-index:100; background:rgba(18,18,18,0.92); backdrop-filter:blur(12px); border-bottom:1px solid var(--line);}
-.nav-inner{display:flex; align-items:center; justify-content:space-between; padding:16px 32px; max-width:1180px; margin:0 auto; gap:20px;}
-
-/* Estilos mejorados para el logotipo */
-.brand-logo{display:flex; align-items:center; gap:12px;}
-.brand-logo svg{width:36px; height:36px; flex-shrink:0;}
-.brand-text{display:flex; flex-direction:column; font-family:Georgia, serif; line-height:1.15;}
-.brand-name{font-size:1.15rem; letter-spacing:.02em; color:var(--ink);}
-.brand-sub{font-size:0.75rem; letter-spacing:.12em; color:var(--gold); text-transform:uppercase; font-style:italic;}
-
+.nav-inner{display:flex; align-items:center; justify-content:space-between; padding:12px 32px; max-width:1180px; margin:0 auto; gap:20px;}
+.brand-container{display:flex; align-items:center; gap:12px;}
+.brand-logo{height:36px; width:auto; object-fit:contain;}
+.brand{font-family:Georgia, serif; font-size:1.35rem; letter-spacing:.02em;}
+.brand em{font-style:italic; color:var(--gold);}
 .nav-links{display:flex; gap:28px; font-size:.92rem; align-items:center;}
 .nav-links a{color:var(--ink-dim); transition:color .3s;}
 .nav-links a:hover{color:var(--gold);}
@@ -240,18 +236,10 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
 
 <header class="nav">
   <div class="nav-inner">
-    <a href="#inicio" class="brand-logo">
-      <!-- Icono vectorial elegante de maquillaje (Pincel/Brocha estilizada en tono dorado) -->
-      <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="24" cy="24" r="22" stroke="#d4af37" stroke-width="2" fill="#121212"/>
-        <path d="M24 13C20.134 13 17 16.134 17 20C17 22.386 18.172 24.471 19.945 25.727L21 33.5H27L28.055 25.727C29.828 24.471 31 22.386 31 20C31 16.134 27.866 13 24 13Z" fill="#d4af37" fill-opacity="0.15" stroke="#d4af37" stroke-width="1.5"/>
-        <path d="M21 35.5H27V38.5H21V35.5Z" fill="#d4af37"/>
-      </svg>
-      <div class="brand-text">
-        <span class="brand-name">Angel Sanchez</span>
-        <span class="brand-sub">Maquillaje</span>
-      </div>
-    </a>
+    <div class="brand-container">
+      <img src="https://multimedia.paginasamarillas.es/adsContentSrv/225506500-1-0/ed2807f4-5fb2-4dcb-8fd9-47bca528c7ed/Logo_Angel_Sanchez.png" alt="Logo Angel Sanchez" class="brand-logo">
+      <div class="brand">Angel Sanchez <em>Maquillaje</em></div>
+    </div>
     <button class="menu-toggle" id="menuToggle" onclick="toggleMenu()">
       <span></span>
       <span></span>
@@ -466,14 +454,7 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
 
 <footer>
   <div class="wrap">
-    <div class="brand-logo" style="justify-content:center; margin-bottom:10px;">
-      <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:28px; height:28px;">
-        <circle cx="24" cy="24" r="22" stroke="#d4af37" stroke-width="2" fill="#121212"/>
-        <path d="M24 13C20.134 13 17 16.134 17 20C17 22.386 18.172 24.471 19.945 25.727L21 33.5H27L28.055 25.727C29.828 24.471 31 22.386 31 20C31 16.134 27.866 13 24 13Z" fill="#d4af37" fill-opacity="0.15" stroke="#d4af37" stroke-width="1.5"/>
-        <path d="M21 35.5H27V38.5H21V35.5Z" fill="#d4af37"/>
-      </svg>
-      <span style="font-family:Georgia,serif; font-size:1.05rem;">Angel Sanchez — Maquillista Profesional</span>
-    </div>
+    <span class="brand">Angel Sanchez — Maquillista Profesional</span>
     <p>+502 3630 7602 · Guatemala · © 2026</p>
   </div>
 </footer>
