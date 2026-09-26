@@ -5,7 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Angel Sanchez — Maquillista Profesional</title>
 
-<!-- Enlace para PWABuilder -->
+<!-- Favicon personalizado con el logo -->
+<link rel="icon" type="image/png" href="https://multimedia.paginasamarillas.es/adsContentSrv/225506500-1-0/ed2807f4-5fb2-4dcb-8fd9-47bca528c7ed/Logo_Angel_Sanchez.png">
+
+<!-- Enlace para PWABuilder / Conversión a APK -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#121212">
 
@@ -39,12 +42,52 @@ body.is-admin [contenteditable="true"]:focus{outline:2px solid var(--gold); back
 header.nav{position:fixed; top:0; left:0; right:0; z-index:100; background:rgba(18,18,18,0.92); backdrop-filter:blur(12px); border-bottom:1px solid var(--line);}
 .nav-inner{display:flex; align-items:center; justify-content:space-between; padding:12px 32px; max-width:1180px; margin:0 auto; gap:20px;}
 .brand-container{display:flex; align-items:center; gap:12px;}
-.brand-logo{height:36px; width:auto; object-fit:contain;}
 .brand{font-family:Georgia, serif; font-size:1.35rem; letter-spacing:.02em;}
 .brand em{font-style:italic; color:var(--gold);}
+
+/* NUEVA ANIMACIÓN FLOTANTE Y VISTOSA PARA EL MENÚ */
 .nav-links{display:flex; gap:28px; font-size:.92rem; align-items:center;}
-.nav-links a{color:var(--ink-dim); transition:color .3s;}
-.nav-links a:hover{color:var(--gold);}
+.nav-links a{
+  color: var(--ink-dim);
+  position: relative;
+  padding: 6px 2px;
+  transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.nav-links a::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(212, 175, 55, 0.08);
+  border-radius: 4px;
+  transform: scale(0.8);
+  opacity: 0;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: -1;
+}
+.nav-links a::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: var(--gold);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 10px var(--gold);
+}
+.nav-links a:hover{
+  color: var(--gold);
+  transform: translateY(-2px);
+}
+.nav-links a:hover::before {
+  transform: scale(1);
+  opacity: 1;
+}
+.nav-links a:hover::after {
+  width: 100%;
+  left: 0;
+}
+
 .nav-right{display:flex; align-items:center; gap:12px;}
 .nav-cta{border:1px solid var(--gold); color:var(--gold); padding:8px 18px; font-size:.85rem; border-radius:4px; transition:all .3s;}
 .nav-cta:hover{background:var(--gold); color:var(--bg);}
@@ -158,7 +201,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--gold); outline:none; 
 
 @keyframes pulseGlow{
   0%{box-shadow:0 0 0 0 rgba(212,175,55,0.4);}
-  70%{box-shadow:0 0 0 8px rgba(212,175,55,0);}
+  70%{box-shadow:0 0 0 8px rgba(212,175,55,0); }
   100%{box-shadow:0 0 0 0 rgba(212,175,55,0);}
 }
 
@@ -197,8 +240,54 @@ input:focus,select:focus,textarea:focus{border-color:var(--gold); outline:none; 
 .custom-dynamic-section{border-top:1px solid var(--line); background:var(--bg-soft); position:relative;}
 .delete-section-btn{position:absolute; top:20px; right:20px; background:var(--wine); color:#fff; border:none; padding:8px 14px; border-radius:4px; font-size:0.8rem; cursor:pointer; z-index:10;}
 
-footer{padding:50px 0; border-top:1px solid var(--line); text-align:center;}
-footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
+/* ANIMACIONES DEL FOOTER */
+footer {
+  padding: 60px 0;
+  background: linear-gradient(180deg, var(--bg) 0%, #171515 100%);
+  border-top: 1px solid var(--line);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+footer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  animation: shimmerFooter 4s ease-in-out infinite;
+}
+
+@keyframes shimmerFooter {
+  0%, 100% { opacity: 0.3; width: 40%; }
+  50% { opacity: 1; width: 80%; }
+}
+
+footer .brand {
+  display: inline-block;
+  transition: transform 0.4s ease, text-shadow 0.4s ease;
+}
+
+footer .brand:hover {
+  transform: translateY(-3px);
+  text-shadow: 0 4px 20px rgba(212, 175, 55, 0.35);
+}
+
+footer p {
+  color: var(--ink-dim);
+  font-size: .85rem;
+  margin-top: 10px;
+  letter-spacing: 0.05em;
+  transition: color 0.3s ease;
+}
+
+footer p:hover {
+  color: var(--gold-soft);
+}
 
 .modal{position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:200; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity .3s;}
 .modal.active{opacity:1; pointer-events:auto;}
@@ -237,7 +326,6 @@ footer p{color:var(--ink-dim); font-size:.82rem; margin-top:6px;}
 <header class="nav">
   <div class="nav-inner">
     <div class="brand-container">
-      <img src="https://multimedia.paginasamarillas.es/adsContentSrv/225506500-1-0/ed2807f4-5fb2-4dcb-8fd9-47bca528c7ed/Logo_Angel_Sanchez.png" alt="Logo Angel Sanchez" class="brand-logo">
       <div class="brand">Angel Sanchez <em>Maquillaje</em></div>
     </div>
     <button class="menu-toggle" id="menuToggle" onclick="toggleMenu()">
@@ -1562,7 +1650,6 @@ applyAdminUI();
 resetTimer();
 </script>
 
-<!-- Registro automático de Service Worker para PWABuilder -->
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
