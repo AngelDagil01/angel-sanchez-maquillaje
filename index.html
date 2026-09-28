@@ -176,8 +176,7 @@ section{padding:90px 0;}
 .service-card::before{content:''; position:absolute; top:0; left:0; width:100%; height:3px; background:var(--gold); opacity:0; transition:opacity .3s;}
 .service-card:hover{transform:translateY(-6px); box-shadow:0 12px 30px rgba(0,0,0,0.4); border-color:var(--gold);}
 .service-card:hover::before{opacity:1;}
-.service-header-row{display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;}
-.service-num{color:var(--gold); font-size:.8rem; letter-spacing:.1em; display:block;}
+.service-header-row{display:flex; justify-content:flex-end; align-items:center; margin-bottom:20px;}
 .service-del{background:rgba(122,36,56,0.85); color:#fff; border:none; width:26px; height:26px; border-radius:50%; cursor:pointer; font-size:0.8rem; display:flex; align-items:center; justify-content:center;}
 .service-card h3{font-size:1.4rem; margin-bottom:12px; font-family:Georgia, serif;}
 .service-card p{color:var(--ink-dim); font-size:.9rem; line-height:1.6; margin-bottom:20px;}
@@ -456,6 +455,20 @@ input:focus,select:focus,textarea:focus{border-color:var(--gold); outline:none; 
 .status-animated-badge.pending{background:rgba(212,175,55,0.1); color:var(--gold); border:1px solid rgba(212,175,55,0.3); animation:pulseGlow 2s infinite;}
 .status-animated-badge.confirmed{background:var(--gold); color:var(--bg); font-weight:600;}
 .status-animated-badge.declined{border:1px solid var(--line); color:var(--ink-dim); text-decoration:line-through;}
+
+.cancel-btn {
+  background: var(--wine);
+  color: #fff;
+  border: 1px solid var(--wine-deep);
+  padding: 8px 14px;
+  font-size: 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.cancel-btn:hover {
+  background: #a33249;
+}
 
 @keyframes pulseGlow{
   0%{box-shadow:0 0 0 0 rgba(212,175,55,0.4);}
@@ -826,7 +839,7 @@ footer p:hover {
       <button class="auth-tab" onclick="switchAuthTab('login')">Ya tengo cuenta (Iniciar sesión)</button>
     </div>
     <div id="authRegisterSection" class="auth-section active">
-      <p style="color:var(--ink-dim); font-size:0.9rem; margin-bottom:20px; line-height:1.5;">Regístrate para llevar control de tus reservas y ver el estado de tus citas.</p>
+      <p style="color:var(--ink-dim); font-size:0.9rem; margin-bottom:20px; line-height:1.5;">Debes crear una cuenta para poder gestionar tus citas y cancelarlas cuando lo requieras.</p>
       <form id="accountForm">
         <div><label for="accName">Tu Nombre Completo</label><input id="accName" required placeholder="Ej. Ana Gómez"></div>
         <div><label for="accPhone">Teléfono / WhatsApp</label><input id="accPhone" type="tel" required placeholder="Ej. 55555555"></div>
@@ -902,10 +915,10 @@ const defaultGallery = [
 ];
 
 const defaultServices = [
-  {num:'01', title:'Novias', desc:'Prueba previa incluida, maquillaje de larga duración y retoque.', price:'Desde Q450', rawPrice: 450},
-  {num:'02', title:'Sesión fotográfica', desc:'Maquillaje editorial adaptado a la luz y concepto.', price:'Desde Q300', rawPrice: 300},
-  {num:'03', title:'Eventos sociales', desc:'Graduaciones, quince años y fiestas — larga duración.', price:'Desde Q250', rawPrice: 250},
-  {num:'04', title:'Social express', desc:'Ideal para citas o reuniones rápidas.', price:'Desde Q180', rawPrice: 180}
+  {title:'Novias', desc:'Prueba previa incluida, maquillaje de larga duración y retoque.', price:'Desde Q450', rawPrice: 450},
+  {title:'Sesión fotográfica', desc:'Maquillaje editorial adaptado a la luz y concepto.', price:'Desde Q300', rawPrice: 300},
+  {title:'Eventos sociales', desc:'Graduaciones, quince años y fiestas — larga duración.', price:'Desde Q250', rawPrice: 250},
+  {title:'Social express', desc:'Ideal para citas o reuniones rápidas.', price:'Desde Q180', rawPrice: 180}
 ];
 
 let siteData = {
@@ -973,6 +986,7 @@ function setupCloudRealtime(){
     snap.forEach(d => appointmentsData.push({ id:d.id, ...d.data() }));
     renderAppts();
     renderCalendar();
+    renderConfirmed();
   }, err => console.error('Error realtime en citas:', err));
 }
 
@@ -1107,8 +1121,17 @@ async function initAppFromCloud(){
   }
   renderAll();
   checkUserSessionModal();
+  setMinBookingDate();
 }
 window.initAppFromCloud = initAppFromCloud;
+
+function setMinBookingDate() {
+  const bDateInput = document.getElementById('bDate');
+  if (bDateInput) {
+    const today = new Date().toISOString().split('T')[0];
+    bDateInput.min = today;
+  }
+}
 
 async function saveSectionText(key, text){
   siteData.texts[key] = text.trim();
@@ -1128,6 +1151,7 @@ function renderAll(){
   renderCategoryControls();
   renderGallery();
   renderAppts();
+  renderConfirmed();
   renderUserPill();
   renderWelcomeBanner();
   renderCalendar();
@@ -1190,6 +1214,7 @@ document.getElementById('accountForm').addEventListener('submit', async function
   document.getElementById('accountModal').classList.remove('active');
   renderUserPill();
   renderWelcomeBanner();
+  renderConfirmed();
   checkUserSessionModal();
 });
 
@@ -1226,6 +1251,7 @@ document.getElementById('loginFormUser').addEventListener('submit', async functi
       document.getElementById('accountModal').classList.remove('active');
       renderUserPill();
       renderWelcomeBanner();
+      renderConfirmed();
       checkUserSessionModal();
       alert(`¡Bienvenido de nuevo, ${currentUser.name}!`);
     } else {
@@ -1288,6 +1314,7 @@ window.logoutUser = function(){
   closeProfileModal();
   renderUserPill();
   renderWelcomeBanner();
+  renderConfirmed();
   checkUserSessionModal();
 }
 
@@ -1322,6 +1349,7 @@ function renderCarousel(){
   });
   if(current >= imagesToRender.length) current = 0;
   renderHeroManageList();
+  resetTimer();
 }
 
 function renderHeroManageList(){
@@ -1450,14 +1478,13 @@ function renderServices(){
   
   const servicesToRender = siteData.services.length > 0 ? siteData.services : defaultServices;
 
-  servicesToRender.forEach((s, idx) => {
+  servicesToRender.forEach((s) => {
     const card = document.createElement('div');
     card.className = 'service-card';
     let deleteBtnHtml = (isAdmin && s.id) ? `<button class="service-del" onclick="removeService('${s.id}')" title="Eliminar servicio">✕</button>` : '';
 
     card.innerHTML = `
       <div class="service-header-row">
-        <span class="service-num">${s.num || '0' + (idx+1)}</span>
         ${deleteBtnHtml}
       </div>
       <h3 ${isAdmin ? 'contenteditable="true"' : ''} onblur="updateService('${s.id}', 'title', this.textContent)">${s.title}</h3>
@@ -1616,8 +1643,7 @@ async function updateService(id, field, value){
 
 async function addNewService(){
   if(!window.db) return;
-  const newNum = '0' + (siteData.services.length + 1);
-  const newServ = {num: newNum, title: 'Nuevo Servicio', desc: 'Descripción aquí...', price: 'Desde Q200', rawPrice: 200};
+  const newServ = {title: 'Nuevo Servicio', desc: 'Descripción aquí...', price: 'Desde Q200', rawPrice: 200};
   try {
     const { collection, addDoc } = window.firestoreModules;
     await addDoc(collection(window.db, "services"), newServ);
@@ -1851,10 +1877,21 @@ function createCalendarEvent(title, description, date, time) {
 document.getElementById('bookingForm').addEventListener('submit', async function(e){
   e.preventDefault();
 
+  if (!currentUser) {
+    openAccountModal();
+    return;
+  }
+
   const name = document.getElementById('bName').value;
   const phone = document.getElementById('bPhone').value;
   const date = document.getElementById('bDate').value;
   const time = document.getElementById('bTime').value;
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  if (date < todayStr) {
+    alert('No puedes seleccionar días que ya pasaron.');
+    return;
+  }
 
   const selectedBoxes = document.querySelectorAll('input[name="bServices"]:checked');
   const selectedServices = Array.from(selectedBoxes).map(cb => cb.value);
@@ -1883,6 +1920,7 @@ document.getElementById('bookingForm').addEventListener('submit', async function
     appointmentsData.unshift(newAppt);
     renderAppts();
     renderCalendar();
+    renderConfirmed();
   } catch(err) {
     console.error("Error al guardar cita en Firebase:", err);
   }
@@ -1932,6 +1970,7 @@ document.getElementById('manualForm').addEventListener('submit', async function(
     appointmentsData.unshift(newAppt);
     renderAppts();
     renderCalendar();
+    renderConfirmed();
     alert('¡Cita agendada correctamente por el administrador!');
     this.reset();
     updateDropdownLabel('mServicesDropdown', 'mDropdownLabel', 'mServices');
@@ -1951,37 +1990,75 @@ function renderConfirmed(){
   }
 
   if(displayAppts.length === 0){ 
-    wrap.innerHTML = `<div class="empty-note">${currentUser ? 'Aún no tienes citas registradas.' : 'Visualiza el estado de tus citas o agenda una nueva arriba.'}</div>`; 
+    wrap.innerHTML = `<div class="empty-note">${currentUser ? 'Aún no tienes citas registradas.' : 'Debes iniciar sesión para visualizar y gestionar tus citas.'}</div>`; 
     return; 
   }
   
-  const container = document.createElement('div');
+  wrap.innerHTML = '';
   displayAppts.forEach(a => {
     const card = document.createElement('div'); card.className = 'client-agenda-card';
     let statusBadge = a.status === 'confirmed' ? '<span class="status-animated-badge confirmed">✓ Confirmada por el Estudio</span>' : a.status === 'declined' ? '<span class="status-animated-badge declined">✕ Declinada</span>' : '<span class="status-animated-badge pending">⏳ En espera de revisión</span>';
     
+    let cancelActionHtml = '';
+    if (a.status !== 'declined') {
+      cancelActionHtml = `<button class="cancel-btn" onclick="cancelAppointment('${a.id}', '${a.date}')">Cancelar Cita</button>`;
+    }
+
     card.innerHTML = `
       <div class="client-agenda-info">
         <h3>${a.service || 'Servicio de Maquillaje'}</h3>
         <p><strong>Fecha:</strong> ${a.date} · <strong>Hora:</strong> ${a.time}</p>
-        <span class="details-more">Cliente: ${a.name} (${a.phone})</span>
+        <span class="details-more">Cliente: ${a.name || (currentUser ? currentUser.name : 'No especificado')} · ${a.phone}</span>
       </div>
-      <div>${statusBadge}</div>
+      <div style="display:flex; align-items:center; gap:12px;">
+        ${statusBadge}
+        ${cancelActionHtml}
+      </div>
     `;
-    container.appendChild(card);
+    wrap.appendChild(card);
   });
-  wrap.innerHTML = '';
-  wrap.appendChild(container);
 }
 
+window.cancelAppointment = async function(id, apptDateStr) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const [year, month, day] = apptDateStr.split('-').map(Number);
+  const apptDate = new Date(year, month - 1, day);
+  apptDate.setHours(0, 0, 0, 0);
+
+  const diffTime = apptDate - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 2) {
+    alert('La cita no se puede cancelar, comunícate con el estudio.');
+    return;
+  }
+
+  if (!confirm('¿Estás seguro de que deseas cancelar esta cita?')) return;
+
+  if (id && window.db) {
+    try {
+      const { doc, deleteDoc } = window.firestoreModules;
+      await deleteDoc(doc(window.db, "appointments", id));
+      appointmentsData = appointmentsData.filter(a => a.id !== id);
+      renderAppts();
+      renderCalendar();
+      renderConfirmed();
+      alert('Tu cita ha sido cancelada exitosamente.');
+    } catch(e) {
+      console.error("Error al cancelar la cita:", e);
+    }
+  }
+};
+
 function renderAppts(){
-  renderConfirmed();
   const list = document.getElementById('apptList');
   if(!list) return;
   list.innerHTML = '';
 
   if(appointmentsData.length === 0){
-    list.innerHTML = '<div class="appt-empty">No hay solicitudes de citas por el momento.</div>';
+    list.innerHTML = `<div class="appt-empty">No hay solicitudes de citas por el momento.</div>`;
     return;
   }
 
@@ -1989,26 +2066,24 @@ function renderAppts(){
     const row = document.createElement('div');
     row.className = 'appt-row';
     
-    let actions = '';
-    if(a.status === 'pending'){
-      actions = `
-        <div class="appt-actions">
-          <button class="accept" onclick="updateApptStatus('${a.id}', 'confirmed')">Aceptar</button>
-          <button onclick="updateApptStatus('${a.id}', 'declined')">Rechazar</button>
-        </div>
-      `;
-    } else {
-      const badgeClass = a.status === 'confirmed' ? 'status-confirmed' : 'status-declined';
-      const badgeText = a.status === 'confirmed' ? 'Confirmada' : 'Declinada';
-      actions = `<span class="status-badge ${badgeClass}">${badgeText}</span>`;
-    }
+    let statusClass = a.status === 'confirmed' ? 'status-confirmed' : a.status === 'declined' ? 'status-declined' : 'status-pending';
+    let statusLabel = a.status === 'confirmed' ? 'Confirmada' : a.status === 'declined' ? 'Rechazada' : 'Pendiente';
 
     row.innerHTML = `
       <div>
         <strong>${a.name} (${a.phone})</strong>
-        <span>${a.date} a las ${a.time} · ${a.service}</span>
+        <span>📅 ${a.date} | ⏰ ${a.time}</span>
+        <span>🛠️ ${a.service}</span>
+        <span style="color:var(--gold-soft); font-size:0.72rem;">Origen: ${a.source || 'Web'}</span>
       </div>
-      ${actions}
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+        <span class="status-badge ${statusClass}">${statusLabel}</span>
+        <div class="appt-actions">
+          <button class="accept" onclick="updateApptStatus('${a.id}', 'confirmed')">Aceptar</button>
+          <button onclick="updateApptStatus('${a.id}', 'declined')">Rechazar</button>
+          <button onclick="deleteAppt('${a.id}')" style="color:var(--wine);">Eliminar</button>
+        </div>
+      </div>
     `;
     list.appendChild(row);
   });
@@ -2017,122 +2092,143 @@ function renderAppts(){
 }
 
 async function updateApptStatus(id, newStatus){
-  if(!window.db) return;
+  if(!id || !window.db) return;
   try {
     const { doc, updateDoc } = window.firestoreModules;
     await updateDoc(doc(window.db, "appointments", id), { status: newStatus });
   } catch(e) {
-    console.error("Error al actualizar estado de cita:", e);
+    console.error("Error actualizando cita:", e);
+  }
+}
+
+async function deleteAppt(id){
+  if(!id || !window.db) return;
+  if(!confirm('¿Eliminar registro de cita permanentemente?')) return;
+  try {
+    const { doc, deleteDoc } = window.firestoreModules;
+    await deleteDoc(doc(window.db, "appointments", id));
+  } catch(e) {
+    console.error("Error eliminando cita:", e);
   }
 }
 
 function renderFinancialStats(){
-  const container = document.getElementById('statsGridContainer');
-  if(!container) return;
-  container.innerHTML = '';
+  const statsWrap = document.getElementById('statsGridContainer');
+  if(!statsWrap) return;
+  statsWrap.innerHTML = '';
 
-  const confirmedAppts = appointmentsData.filter(a => a.status === 'confirmed');
+  const confirmed = appointmentsData.filter(a => a.status === 'confirmed');
   
-  if(confirmedAppts.length === 0){
-    container.innerHTML = '<p style="color:var(--ink-dim); font-size:0.9rem;">No hay citas confirmadas para calcular estadísticas.</p>';
-    return;
-  }
+  let totalRevenue = 0;
+  let serviceCounts = {};
+  let monthlyRevenue = {};
 
-  let totalIncome = 0;
-  const serviceStats = {};
+  confirmed.forEach(appt => {
+    let serviceNames = (appt.service || '').split(',').map(s => s.trim());
+    
+    serviceNames.forEach(sName => {
+      let matchedServ = siteData.services.find(s => s.title.toLowerCase() === sName.toLowerCase());
+      let price = matchedServ ? (matchedServ.rawPrice || 200) : 200;
+      
+      totalRevenue += price;
+      serviceCounts[sName] = (serviceCounts[sName] || 0) + 1;
 
-  confirmedAppts.forEach(a => {
-    let estPrice = 250;
-    if(siteData.services.length > 0){
-      const match = siteData.services.find(s => a.service && a.service.includes(s.title));
-      if(match && match.rawPrice) estPrice = match.rawPrice;
-    }
-    totalIncome += estPrice;
-
-    const sName = a.service || 'Otros';
-    serviceStats[sName] = (serviceStats[sName] || 0) + estPrice;
+      if(appt.date){
+        let monthKey = appt.date.substring(0, 7);
+        monthlyRevenue[monthKey] = (monthlyRevenue[monthKey] || 0) + price;
+      }
+    });
   });
 
   const totalCard = document.createElement('div');
   totalCard.className = 'stat-card';
-  totalCard.innerHTML = `<span>Ingresos Totales (Confirmados)</span><strong>Q${totalIncome}</strong>`;
-  container.appendChild(totalCard);
+  totalCard.innerHTML = `<span>Ingresos Totales (Citas Confirmadas)</span><strong>Q${totalRevenue}</strong>`;
+  statsWrap.appendChild(totalCard);
 
-  const countCard = document.createElement('div');
-  countCard.className = 'stat-card';
-  countCard.innerHTML = `<span>Citas Atendidas / Confirmadas</span><strong>${confirmedAppts.length} citas</strong>`;
-  container.appendChild(countCard);
+  const totalApptsCard = document.createElement('div');
+  totalApptsCard.className = 'stat-card';
+  totalApptsCard.innerHTML = `<span>Citas Confirmadas</span><strong>${confirmed.length} citas</strong>`;
+  statsWrap.appendChild(totalApptsCard);
 
-  Object.keys(serviceStats).forEach(serv => {
-    const sc = document.createElement('div');
-    sc.className = 'stat-card';
-    sc.innerHTML = `<span>Ganan. por ${serv}</span><strong>Q${serviceStats[serv]}</strong>`;
-    container.appendChild(sc);
+  Object.keys(monthlyRevenue).sort().reverse().forEach(m => {
+    const card = document.createElement('div');
+    card.className = 'stat-card';
+    card.innerHTML = `<span>Mes: ${m}</span><strong>Q${monthlyRevenue[m]}</strong>`;
+    statsWrap.appendChild(card);
   });
 }
 
-function initDragAndDrop(){
-  if(!isAdmin) return;
-  const main = document.getElementById('mainSectionsContainer');
-  const sections = main.querySelectorAll('section');
-
-  sections.forEach(sec => {
-    sec.setAttribute('draggable', 'true');
-
-    sec.addEventListener('dragstart', (e) => {
-      if(!isAdmin) return;
-      sec.classList.add('dragging');
-      e.dataTransfer.setData('text/plain', sec.dataset.sectionId || sec.id);
-    });
-
-    sec.addEventListener('dragend', () => {
-      sec.classList.remove('dragging');
-      saveSectionsOrder();
-    });
+function initDragAndDrop() {
+  if (!isAdmin) return;
+  const sections = document.querySelectorAll('main > section');
+  sections.forEach(section => {
+    section.setAttribute('draggable', 'true');
+    section.addEventListener('dragstart', handleDragStart);
+    section.addEventListener('dragover', handleDragOver);
+    section.addEventListener('drop', handleDrop);
+    section.addEventListener('dragend', handleDragEnd);
   });
+}
 
-  main.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    if(!isAdmin) return;
-    const draggingSec = main.querySelector('.dragging');
-    const afterElement = getDragAfterElement(main, e.clientY);
-    if(afterElement == null){
-      main.appendChild(draggingSec);
+let dragSrcEl = null;
+
+function handleDragStart(e) {
+  if (!isAdmin) return;
+  dragSrcEl = this;
+  this.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+function handleDragOver(e) {
+  if (!isAdmin) return;
+  if (e.preventDefault) e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  return false;
+}
+
+function handleDrop(e) {
+  if (!isAdmin) return;
+  if (e.stopPropagation) e.stopPropagation();
+  if (dragSrcEl !== this) {
+    const main = document.getElementById('mainSectionsContainer');
+    const sections = Array.from(main.querySelectorAll('main > section'));
+    const srcIndex = sections.indexOf(dragSrcEl);
+    const targetIndex = sections.indexOf(this);
+    if (srcIndex < targetIndex) {
+      this.parentNode.insertBefore(dragSrcEl, this.nextSibling);
     } else {
-      main.insertBefore(draggingSec, afterElement);
+      this.parentNode.insertBefore(dragSrcEl, this);
     }
-  });
+    saveSectionsOrder();
+  }
+  return false;
 }
 
-function getDragAfterElement(container, y){
-  const draggableElements = [...container.querySelectorAll('section:not(.dragging)')];
-  return draggableElements.reduce((closest, child) => {
-    const box = child.getBoundingClientRect();
-    const offset = y - box.top - box.height / 2;
-    if(offset < 0 && offset > closest.offset){
-      return { offset: offset, element: child };
-    } else {
-      return closest;
-    }
-  }, { offset: Number.NEGATIVE_INFINITY }).element;
+function handleDragEnd() {
+  this.classList.remove('dragging');
 }
 
-function saveSectionsOrder(){
-  const main = document.getElementById('mainSectionsContainer');
-  const sections = main.querySelectorAll('section');
-  const order = Array.from(sections).map(s => s.dataset.sectionId || s.id);
+function saveSectionsOrder() {
+  const sections = document.querySelectorAll('main > section');
+  const order = Array.from(sections).map(s => s.getAttribute('data-section-id')).filter(Boolean);
   localStorage.setItem('sectionsOrder', JSON.stringify(order));
+  if (window.db) {
+    try {
+      const { doc, setDoc } = window.firestoreModules;
+      setDoc(doc(window.db, "config", "layout"), { order });
+    } catch (e) {
+      console.error("Error guardando orden de secciones:", e);
+    }
+  }
 }
 
-function restoreSectionsOrder(){
+function restoreSectionsOrder() {
   const savedOrder = JSON.parse(localStorage.getItem('sectionsOrder') || 'null');
-  if(!savedOrder) return;
+  if (!savedOrder) return;
   const main = document.getElementById('mainSectionsContainer');
   savedOrder.forEach(id => {
-    const sec = main.querySelector(`section[data-section-id="${id}"], section#${id}`);
-    if(sec){
-      main.appendChild(sec);
-    }
+    const section = main.querySelector(`section[data-section-id="${id}"]`);
+    if (section) main.appendChild(section);
   });
 }
 </script>
