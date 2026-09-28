@@ -202,6 +202,100 @@ section{padding:90px 0;}
 .gallery-item .tag{position:absolute; bottom:12px; left:12px; font-size:.7rem; letter-spacing:.05em; color:var(--bg); background:var(--gold); padding:4px 8px; border-radius:2px; font-weight:500;}
 .gallery-item .del{position:absolute; top:10px; right:10px; background:rgba(122,36,56,0.9); color:#fff; width:30px; height:30px; border:0; cursor:pointer; border-radius:50%; z-index:2; display:flex; align-items:center; justify-content:center;}
 
+/* REPERTORIOS POR CATEGORIA DENTRO DE LA GALERIA */
+.gallery-category-block{
+  position:relative;
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:0 0 14px;
+  overflow:hidden;
+}
+.gallery-category-preview{
+  position:relative;
+  width:100%;
+  aspect-ratio:1/1;
+  overflow:hidden;
+  background:var(--bg);
+  border-radius:0;
+  border:0;
+  cursor:pointer;
+}
+.gallery-category-preview img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  transition:transform .5s ease, filter .3s ease;
+}
+.gallery-category-preview:hover img{
+  transform:scale(1.04);
+  filter:brightness(.78);
+}
+.gallery-category-prompt{
+  margin:12px 12px 0;
+  max-width:none;
+  text-align:center;
+  color:#fff;
+  font-size:.9rem;
+  line-height:1.45;
+  font-weight:700;
+  cursor:pointer;
+  padding:10px 12px;
+  border:1px solid rgba(212,175,55,.35);
+  border-radius:6px;
+  background:rgba(212,175,55,.06);
+  transition:all .25s ease;
+}
+.gallery-category-prompt:hover{
+  background:rgba(212,175,55,.12);
+  border-color:var(--gold);
+  color:#fff;
+}
+.gallery-category-prompt strong{color:#fff;}
+.gallery-repertoire{
+  display:none;
+  margin-top:18px;
+}
+.gallery-category-block.open .gallery-repertoire{display:block;}
+.gallery-repertoire-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:14px;
+  flex-wrap:wrap;
+}
+.gallery-repertoire-title{
+  color:var(--gold);
+  font-family:Georgia, serif;
+  font-size:1.25rem;
+}
+.gallery-close-btn{
+  background:var(--wine);
+  color:#fff;
+  border:1px solid var(--wine-deep);
+  border-radius:5px;
+  padding:8px 14px;
+  cursor:pointer;
+  font-size:.8rem;
+  font-weight:600;
+}
+.gallery-close-btn:hover{background:#a33249;}
+.gallery-repertoire-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:16px;
+}
+.gallery-category-block.open .gallery-category-preview{display:none;}
+.gallery-category-block.open .gallery-category-prompt{display:none;}
+.gallery-category-block.gallery-category-hidden{display:none;}
+.gallery-category-block.open .gallery-repertoire{margin-top:0;}
+.gallery-category-block.open{grid-column:1 / -1; padding:18px;}
+@media(max-width:900px){
+  .gallery-repertoire-grid{grid-template-columns:1fr;}
+  .gallery-category-block{padding:14px;}
+}
+
 .booking{background:var(--bg-soft); border-top:1px solid var(--line); border-bottom:1px solid var(--line);}
 .booking-grid{display:grid; grid-template-columns:1fr 1.15fr; gap:60px; align-items:start;}
 .booking-info h2{font-size:clamp(1.9rem,3.2vw,2.7rem); margin-bottom:16px;}
@@ -1581,21 +1675,136 @@ function renderGallery(){
   grid.innerHTML = '';
 
   const items = siteData.gallery.length > 0 ? siteData.gallery : defaultGallery;
-  const filtered = currentCategory === 'Todas' ? items : items.filter(i => i.category === currentCategory);
 
-  filtered.forEach(item => {
-    const card = document.createElement('div');
-    card.className = 'gallery-item';
-    let delBtnHtml = (isAdmin && item.id) ? `<button class="del" onclick="event.stopPropagation(); removeGalleryItem('${item.category}', '${item.id}')">✕</button>` : '';
+  /* 
+     "Todas": se muestra una sola portada por cada categoría.
+     El repertorio completo permanece dentro del mismo bloque y se
+     abre al pulsar la imagen o el mensaje. Esto también funciona
+     automáticamente con categorías creadas en el futuro.
+  */
+  if(currentCategory === 'Todas'){
+    const categoriesWithImages = siteData.categories.filter(cat =>
+      items.some(item => item.category === cat)
+    );
 
-    card.innerHTML = `
-      <img src="${item.src}" alt="${item.category}" onclick="openModal('${item.src}')">
-      <span class="tag">${item.category}</span>
-      ${delBtnHtml}
+    categoriesWithImages.forEach(cat => {
+      const categoryItems = items.filter(item => item.category === cat);
+      if(!categoryItems.length) return;
+
+      const block = document.createElement('div');
+      block.className = 'gallery-category-block';
+
+      const preview = categoryItems[0];
+      const previewDel = (isAdmin && preview.id)
+        ? `<button class="del" onclick="event.stopPropagation(); removeGalleryItem('${preview.category}', '${preview.id}')">✕</button>`
+        : '';
+
+      const repertoire = categoryItems.map(item => {
+        const delBtnHtml = (isAdmin && item.id)
+          ? `<button class="del" onclick="event.stopPropagation(); removeGalleryItem('${item.category}', '${item.id}')">✕</button>`
+          : '';
+
+        return `
+          <div class="gallery-item">
+            <img src="${item.src}" alt="${item.category}" onclick="openModal('${item.src}')">
+            <span class="tag">${item.category}</span>
+            ${delBtnHtml}
+          </div>
+        `;
+      }).join('');
+
+      block.innerHTML = `
+        <div class="gallery-category-preview" onclick="openGalleryCategory(this.closest('.gallery-category-block'))">
+          <img src="${preview.src}" alt="${cat}">
+          <span class="tag">${cat}</span>
+          ${previewDel}
+        </div>
+
+        <div class="gallery-category-prompt" onclick="openGalleryCategory(this.closest('.gallery-category-block'))">
+          <strong>Presiona para ver el repertorio de esta categoría</strong>
+        </div>
+
+        <div class="gallery-repertoire">
+          <div class="gallery-repertoire-head">
+            <div class="gallery-repertoire-title">${cat} · Repertorio</div>
+            <button class="gallery-close-btn" onclick="closeGalleryCategory(this.closest('.gallery-category-block'))">✕ Salir de esta categoría</button>
+          </div>
+          <div class="gallery-repertoire-grid">${repertoire}</div>
+        </div>
+      `;
+
+      grid.appendChild(block);
+    });
+
+    if(!categoriesWithImages.length){
+      grid.innerHTML = `<div class="empty-note" style="grid-column:1/-1;">No hay imágenes disponibles en la galería.</div>`;
+    }
+    return;
+  }
+
+  /* Al seleccionar una categoría desde los filtros, se abre directamente
+     su repertorio completo sin crear una nueva sección. */
+  const filtered = items.filter(i => i.category === currentCategory);
+
+  if(!filtered.length){
+    grid.innerHTML = `<div class="empty-note" style="grid-column:1/-1;">No hay imágenes disponibles en esta categoría.</div>`;
+    return;
+  }
+
+  const block = document.createElement('div');
+  block.className = 'gallery-category-block open';
+
+  const repertoire = filtered.map(item => {
+    const delBtnHtml = (isAdmin && item.id)
+      ? `<button class="del" onclick="event.stopPropagation(); removeGalleryItem('${item.category}', '${item.id}')">✕</button>`
+      : '';
+
+    return `
+      <div class="gallery-item">
+        <img src="${item.src}" alt="${item.category}" onclick="openModal('${item.src}')">
+        <span class="tag">${item.category}</span>
+        ${delBtnHtml}
+      </div>
     `;
-    grid.appendChild(card);
-  });
+  }).join('');
+
+  block.innerHTML = `
+    <div class="gallery-repertoire-head">
+      <div class="gallery-repertoire-title">${currentCategory} · Repertorio</div>
+      <button class="gallery-close-btn" onclick="setCategory('Todas')">✕ Salir de esta categoría</button>
+    </div>
+    <div class="gallery-repertoire-grid">${repertoire}</div>
+  `;
+
+  grid.appendChild(block);
 }
+
+window.openGalleryCategory = function(block){
+  if(!block) return;
+  const grid = block.parentElement;
+  if(grid){
+    grid.querySelectorAll('.gallery-category-block').forEach(other => {
+      if(other !== block){
+        other.classList.remove('open');
+        other.classList.add('gallery-category-hidden');
+      }
+    });
+  }
+  block.classList.remove('gallery-category-hidden');
+  block.classList.add('open');
+  block.scrollIntoView({ behavior:'smooth', block:'nearest' });
+};
+
+window.closeGalleryCategory = function(block){
+  if(!block) return;
+  const grid = block.parentElement;
+  if(grid){
+    grid.querySelectorAll('.gallery-category-block').forEach(other => {
+      other.classList.remove('gallery-category-hidden');
+    });
+  }
+  block.classList.remove('open');
+};
 
 window.addNewService = async function(){
   if(!isAdmin) return;
