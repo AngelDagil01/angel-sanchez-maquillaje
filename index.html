@@ -469,6 +469,23 @@ input:focus,select:focus,textarea:focus{border-color:var(--gold); outline:none; 
 .cancel-btn:hover {
   background: #a33249;
 }
+.cancel-btn:disabled {
+  background: #444;
+  border-color: #555;
+  color: #888;
+  cursor: not-allowed;
+}
+
+.cancel-info-msg {
+  font-size: 0.78rem;
+  margin-top: 8px;
+  color: var(--ink-dim);
+  line-height: 1.4;
+  max-width: 380px;
+}
+.cancel-info-msg.warning {
+  color: #ff8a80;
+}
 
 @keyframes pulseGlow{
   0%{box-shadow:0 0 0 0 rgba(212,175,55,0.4);}
@@ -1295,7 +1312,7 @@ function openProfileModal(){
     openAccountModal();
     return;
   }
-  const userAppts = appointmentsData.filter(a => a.userEmail === currentUser.email || a.phone === currentUser.phone);
+  const userAppts = appointmentsData.filter(a => (a.userEmail && currentUser.email && a.userEmail === currentUser.email) || (a.phone && currentUser.phone && a.phone === currentUser.phone));
   const confirmedCount = userAppts.filter(a => a.status === 'confirmed').length;
 
   document.getElementById('profileUserEmail').textContent = `${currentUser.name} (${currentUser.email || currentUser.phone})`;
@@ -1517,157 +1534,44 @@ function renderCategoryControls(){
   const filterWrap = document.getElementById('galleryFilterContainer');
   const catSelect = document.getElementById('categorySelect');
   const catManage = document.getElementById('categoryManageList');
-  
-  if(filterWrap){
-    filterWrap.innerHTML = `<button class="filter-btn ${currentCategory === 'Todas' ? 'active' : ''}" onclick="filterGallery('Todas', this)">Todas</button>`;
-    siteData.categories.forEach(cat => {
-      const btn = document.createElement('button');
-      btn.className = `filter-btn ${currentCategory === cat ? 'active' : ''}`;
-      btn.textContent = cat;
-      btn.onclick = function(){ filterGallery(cat, this); };
-      filterWrap.appendChild(btn);
-    });
-  }
+  if(!filterWrap) return;
 
-  if(catSelect){
-    catSelect.innerHTML = '';
-    siteData.categories.forEach(cat => {
+  filterWrap.innerHTML = `<button class="filter-btn ${currentCategory==='Todas'?'active':''}" onclick="setCategory('Todas')">Todas</button>`;
+  if(catSelect) catSelect.innerHTML = '';
+  if(catManage) catManage.innerHTML = '';
+
+  siteData.categories.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = `filter-btn ${currentCategory===cat?'active':''}`;
+    btn.textContent = cat;
+    btn.onclick = () => setCategory(cat);
+    filterWrap.appendChild(btn);
+
+    if(catSelect){
       const opt = document.createElement('option');
       opt.value = cat;
       opt.textContent = cat;
       catSelect.appendChild(opt);
-    });
-  }
-
-  if(catManage){
-    catManage.innerHTML = '';
-    siteData.categories.forEach(catName => {
-      const docItem = (siteData.categoryDocs || []).find(c => c.name === catName);
-      const catId = docItem ? docItem.id : null;
-
-      const item = document.createElement('span');
-      item.style.cssText = 'background:var(--bg); border:1px solid var(--gold); color:var(--gold); padding:5px 12px; border-radius:15px; font-size:0.8rem; display:inline-flex; align-items:center; gap:8px;';
-      
-      let editBtn = `<button onclick="editCategoryName('${catId}', '${catName}')" title="Modificar nombre" style="background:transparent; color:var(--gold); border:none; cursor:pointer; font-size:12px;">✏️</button>`;
-      let delBtn = `<button onclick="removeCategory('${catId}', '${catName}')" title="Eliminar categoría" style="background:var(--wine); color:#fff; border:none; border-radius:50%; width:18px; height:18px; font-size:10px; cursor:pointer;">✕</button>`;
-      
-      item.innerHTML = `<strong>${catName}</strong> ${editBtn} ${delBtn}`;
-      catManage.appendChild(item);
-    });
-  }
-}
-
-async function addNewCategory(){
-  const input = document.getElementById('newCategoryInput');
-  const name = input.value.trim();
-  if(!name){ alert('Ingresa un nombre para la nueva categoría.'); return; }
-  if(siteData.categories.includes(name)){ alert('Esa categoría ya existe.'); return; }
-
-  if(window.db){
-    try {
-      const { collection, addDoc } = window.firestoreModules;
-      await addDoc(collection(window.db, "categories"), { name: name });
-    } catch(e) {
-      console.error("Error al crear categoría en nube:", e);
     }
-  }
-  
-  if(!siteData.categories.includes(name)){
-    siteData.categories.push(name);
-  }
-  input.value = '';
-  renderCategoryControls();
-  setupGalleryRealtime();
-}
 
-async function editCategoryName(id, oldName){
-  const newName = prompt(`Editar nombre de categoría "${oldName}":`, oldName);
-  if(!newName || newName.trim() === '' || newName === oldName) return;
-  const trimmed = newName.trim();
-
-  if(siteData.categories.includes(trimmed)){
-    alert('Ya existe una categoría con ese nombre.');
-    return;
-  }
-
-  if(id && window.db){
-    try {
-      const { doc, updateDoc } = window.firestoreModules;
-      await updateDoc(doc(window.db, "categories", id), { name: trimmed });
-    } catch(e) {
-      console.error("Error al renombrar categoría:", e);
+    if(catManage){
+      const docObj = (siteData.categoryDocs || []).find(c => c.name === cat);
+      const isCustom = !!docObj;
+      const tag = document.createElement('div');
+      tag.style.cssText = 'background:var(--bg); border:1px solid var(--line); padding:6px 12px; border-radius:20px; font-size:0.8rem; display:flex; align-items:center; gap:8px;';
+      tag.innerHTML = `<span>${cat}</span>`;
+      if(isCustom){
+        tag.innerHTML += `<button onclick="renameCategoryDoc('${docObj.id}', '${cat}')" style="background:none; border:none; color:var(--gold); cursor:pointer;">✎</button>`;
+        tag.innerHTML += `<button onclick="removeCategoryDoc('${docObj.id}', '${cat}')" style="background:none; border:none; color:var(--wine); cursor:pointer;">✕</button>`;
+      }
+      catManage.appendChild(tag);
     }
-  }
+  });
+}
 
-  const idx = siteData.categories.indexOf(oldName);
-  if(idx !== -1) siteData.categories[idx] = trimmed;
-  if(currentCategory === oldName) currentCategory = trimmed;
-
+function setCategory(cat){
+  currentCategory = cat;
   renderCategoryControls();
-  setupGalleryRealtime();
-  renderGallery();
-}
-
-async function removeCategory(id, name){
-  if(!confirm(`¿Deseas eliminar la categoría "${name}" y todo su acceso?`)) return;
-
-  if(id && window.db){
-    try {
-      const { doc, deleteDoc } = window.firestoreModules;
-      await deleteDoc(doc(window.db, "categories", id));
-    } catch(e) {
-      console.error("Error al eliminar categoría:", e);
-    }
-  }
-
-  siteData.categories = siteData.categories.filter(c => c !== name);
-  if(currentCategory === name) currentCategory = 'Todas';
-
-  renderCategoryControls();
-  renderGallery();
-}
-
-async function updateService(id, field, value){
-  if(!id || !window.db) return;
-  const match = field === 'price' ? value.match(/\d+/) : null;
-  const updatePayload = { [field]: value.trim() };
-  if(match) updatePayload.rawPrice = parseInt(match[0]);
-
-  try {
-    const { doc, updateDoc } = window.firestoreModules;
-    await updateDoc(doc(window.db, "services", id), updatePayload);
-  } catch(e) {
-    console.error("Error al actualizar servicio:", e);
-  }
-}
-
-async function addNewService(){
-  if(!window.db) return;
-  const newServ = {title: 'Nuevo Servicio', desc: 'Descripción aquí...', price: 'Desde Q200', rawPrice: 200};
-  try {
-    const { collection, addDoc } = window.firestoreModules;
-    await addDoc(collection(window.db, "services"), newServ);
-    initAppFromCloud();
-  } catch(e) {
-    console.error("Error al agregar servicio:", e);
-  }
-}
-
-async function removeService(id){
-  if(!window.db) return;
-  try {
-    const { doc, deleteDoc } = window.firestoreModules;
-    await deleteDoc(doc(window.db, "services", id));
-    initAppFromCloud();
-  } catch(e) {
-    console.error("Error al eliminar servicio:", e);
-  }
-}
-
-function filterGallery(category, btn){
-  currentCategory = category;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  if(btn) btn.classList.add('active');
   renderGallery();
 }
 
@@ -1675,74 +1579,623 @@ function renderGallery(){
   const grid = document.getElementById('galleryGrid');
   if(!grid) return;
   grid.innerHTML = '';
-  
-  const galleryToRender = siteData.gallery.length > 0 ? siteData.gallery : defaultGallery;
-  const filtered = currentCategory === 'Todas' ? galleryToRender : galleryToRender.filter(item => item && item.category === currentCategory);
-  
-  if(filtered.length === 0){
-    grid.innerHTML = `<div style="grid-column:span 4; padding:20px 0; color:var(--ink-dim);">No hay fotos en la categoría "${currentCategory}".</div>`;
-    return;
-  }
 
-  filtered.forEach((item) => {
-    if(!item || !item.src) return;
-    const div = document.createElement('div'); div.className = 'gallery-item';
-    div.onclick = (e) => { if(!e.target.classList.contains('del')) openModal(item.src); };
-    div.innerHTML = `<img src="${item.src}" alt="${item.category || 'Galería'}"><span class="tag">${item.category || 'General'}</span>${(isAdmin && item.id) ? `<button class="del" onclick="removeGalleryImage('${item.id}','${item.category}')">✕</button>` : ''}`;
-    grid.appendChild(div);
+  const items = siteData.gallery.length > 0 ? siteData.gallery : defaultGallery;
+  const filtered = currentCategory === 'Todas' ? items : items.filter(i => i.category === currentCategory);
+
+  filtered.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'gallery-item';
+    let delBtnHtml = (isAdmin && item.id) ? `<button class="del" onclick="event.stopPropagation(); removeGalleryItem('${item.category}', '${item.id}')">✕</button>` : '';
+
+    card.innerHTML = `
+      <img src="${item.src}" alt="${item.category}" onclick="openModal('${item.src}')">
+      <span class="tag">${item.category}</span>
+      ${delBtnHtml}
+    `;
+    grid.appendChild(card);
   });
 }
 
-async function removeGalleryImage(id, category){
-  if(!window.db) return;
-  try {
-    const { doc, deleteDoc } = window.firestoreModules;
-    await deleteDoc(doc(window.db, galleryCollectionName(category), id));
-  } catch(e) {
-    console.error("Error al eliminar imagen de galería:", e);
+window.addNewService = async function(){
+  if(!isAdmin) return;
+  const title = prompt('Título del nuevo servicio:');
+  if(!title) return;
+  const desc = prompt('Descripción del servicio:');
+  const price = prompt('Precio visible (ej. Desde Q200):');
+  const rawPriceStr = prompt('Monto numérico exacto para finanzas (ej. 200):');
+  const rawPrice = parseFloat(rawPriceStr) || 0;
+
+  const newS = { title, desc: desc||'', price: price||'Desde Q0', rawPrice };
+
+  if(window.db){
+    try {
+      const { collection, addDoc } = window.firestoreModules;
+      await addDoc(collection(window.db, "services"), newS);
+    } catch(e) { console.error("Error al añadir servicio:", e); }
+  } else {
+    siteData.services.push(newS);
+    renderServices();
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  const heroFileIn = document.getElementById('heroFileInput');
-  if(heroFileIn){
-    heroFileIn.addEventListener('change', function(e){
-      const files = Array.from(e.target.files);
-      e.target.value = '';
-      files.forEach(async file => {
-        try{
-          if(!window.db) throw new Error('Base de datos no conectada');
-          const dataUrl = await compressImageFile(file);
-          const { collection, addDoc } = window.firestoreModules;
-          await addDoc(collection(window.db, HERO_COLLECTION), { src: dataUrl });
-        }catch(err){
-          console.error("Error al subir foto del carrusel:", err);
-        }
-      });
-    });
+window.updateService = async function(id, field, value){
+  if(!isAdmin || !id) return;
+  const serv = siteData.services.find(s => s.id === id);
+  if(!serv) return;
+
+  if(field === 'title') serv.title = value.trim();
+  if(field === 'desc') serv.desc = value.trim();
+  if(field === 'price') serv.price = value.trim();
+
+  if(window.db){
+    try {
+      const { doc, updateDoc } = window.firestoreModules;
+      await updateDoc(doc(window.db, "services", id), serv);
+    } catch(e) { console.error("Error al actualizar servicio:", e); }
+  }
+}
+
+window.removeService = async function(id){
+  if(!isAdmin || !id) return;
+  if(!confirm('¿Eliminar este servicio?')) return;
+
+  if(window.db){
+    try {
+      const { doc, deleteDoc } = window.firestoreModules;
+      await deleteDoc(doc(window.db, "services", id));
+    } catch(e) { console.error("Error al borrar servicio:", e); }
+  } else {
+    siteData.services = siteData.services.filter(s => s.id !== id);
+    renderServices();
+  }
+}
+
+window.addNewCategory = async function(){
+  if(!isAdmin) return;
+  const input = document.getElementById('newCategoryInput');
+  const catName = input ? input.value.trim() : '';
+  if(!catName) return;
+
+  if(window.db){
+    try {
+      const { collection, addDoc } = window.firestoreModules;
+      await addDoc(collection(window.db, "categories"), { name: catName });
+      input.value = '';
+    } catch(e) { console.error("Error añadiendo categoría:", e); }
+  }
+}
+
+window.renameCategoryDoc = async function(docId, oldName){
+  if(!isAdmin) return;
+  const newName = prompt('Nuevo nombre para la categoría:', oldName);
+  if(!newName || newName === oldName) return;
+
+  if(window.db){
+    try {
+      const { doc, updateDoc } = window.firestoreModules;
+      await updateDoc(doc(window.db, "categories", docId), { name: newName });
+    } catch(e) { console.error("Error renombrando categoría:", e); }
+  }
+}
+
+window.removeCategoryDoc = async function(docId, catName){
+  if(!isAdmin) return;
+  if(!confirm(`¿Eliminar la categoría "${catName}"?`)) return;
+
+  if(window.db){
+    try {
+      const { doc, deleteDoc } = window.firestoreModules;
+      await deleteDoc(doc(window.db, "categories", docId));
+    } catch(e) { console.error("Error eliminando categoría:", e); }
+  }
+}
+
+window.removeGalleryItem = async function(category, docId){
+  if(!isAdmin) return;
+  if(!confirm('¿Eliminar esta imagen de la galería?')) return;
+
+  if(window.db){
+    try {
+      const { doc, deleteDoc } = window.firestoreModules;
+      await deleteDoc(doc(window.db, galleryCollectionName(category), docId));
+    } catch(e) { console.error("Error al eliminar imagen:", e); }
+  }
+}
+
+document.getElementById('heroFileInput')?.addEventListener('change', async function(e){
+  const files = e.target.files;
+  if(!files || !files.length || !window.db) return;
+  const { collection, addDoc } = window.firestoreModules;
+
+  for(let i=0; i<files.length; i++){
+    try {
+      const compressed = await compressImageFile(files[i]);
+      await addDoc(collection(window.db, HERO_COLLECTION), { src: compressed });
+    } catch(err) { alert(err.message || 'Error procesando imagen'); }
+  }
+  e.target.value = '';
+});
+
+document.getElementById('fileInput')?.addEventListener('change', async function(e){
+  const files = e.target.files;
+  const catSelect = document.getElementById('categorySelect');
+  const cat = catSelect ? catSelect.value : 'General';
+  if(!files || !files.length || !window.db) return;
+
+  const { collection, addDoc } = window.firestoreModules;
+
+  for(let i=0; i<files.length; i++){
+    try {
+      const compressed = await compressImageFile(files[i]);
+      await addDoc(collection(window.db, galleryCollectionName(cat)), { src: compressed, category: cat });
+    } catch(err) { alert(err.message || 'Error procesando imagen'); }
+  }
+  e.target.value = '';
+});
+
+/* LÓGICA DEL FORMULARIO Y RESERVA DE CITAS */
+document.getElementById('bookingForm').addEventListener('submit', async function(e){
+  e.preventDefault();
+  if(!currentUser){
+    openAccountModal();
+    return;
   }
 
-  const fileIn = document.getElementById('fileInput');
-  if(fileIn){
-    fileIn.addEventListener('change', function(e){
-      const catSelect = document.getElementById('categorySelect');
-      const cat = catSelect ? catSelect.value : 'Novias';
-      const files = Array.from(e.target.files);
-      e.target.value = '';
-      files.forEach(async file => {
-        try{
-          if(!window.db) throw new Error('Base de datos no conectada');
-          const dataUrl = await compressImageFile(file);
-          const { collection, addDoc } = window.firestoreModules;
-          await addDoc(collection(window.db, galleryCollectionName(cat)), { src: dataUrl });
-        }catch(err){
-          console.error("Error al subir foto de la galería:", err);
-        }
-      });
-    });
+  const name = document.getElementById('bName').value.trim();
+  const phone = document.getElementById('bPhone').value.trim();
+  const date = document.getElementById('bDate').value;
+  const time = document.getElementById('bTime').value;
+
+  const checkedServs = Array.from(document.querySelectorAll('#bServicesDropdown input[name="bServices"]:checked')).map(c => c.value);
+  const serviceTitle = checkedServs.length > 0 ? checkedServs.join(', ') : 'Servicio general';
+
+  const newAppt = {
+    name,
+    phone,
+    date,
+    time,
+    service: serviceTitle,
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+    userName: currentUser.name || name,
+    userEmail: currentUser.email || '',
+    userPhone: currentUser.phone || phone
+  };
+
+  if(window.db){
+    try {
+      const { collection, addDoc } = window.firestoreModules;
+      await addDoc(collection(window.db, "appointments"), newAppt);
+    } catch(err) { console.error("Error guardando cita:", err); }
+  } else {
+    appointmentsData.push(newAppt);
+    renderAppts();
+    renderCalendar();
+    renderConfirmed();
+  }
+
+  /* Descargar recordatorio ICS */
+  downloadICS(name, date, time, serviceTitle);
+
+  /* Abrir WhatsApp */
+  const textMsg = `Hola Angel Sanchez, quisiera reservar una cita:%0A- *Nombre:* ${name}%0A- *Fecha:* ${date}%0A- *Hora:* ${time}%0A- *Servicios:* ${serviceTitle}`;
+  window.open(`https://wa.me/50236307602?text=${textMsg}`, '_blank');
+
+  const msg = document.getElementById('confirmMsg');
+  if(msg){
+    msg.style.display = 'block';
+    setTimeout(() => msg.style.display = 'none', 6000);
   }
 });
 
+/* GENERADOR Y DESCARGADOR DE ARCHIVO .ICS PARA EL CALENDARIO DEL CLIENTE */
+function downloadICS(name, dateStr, timeStr, service){
+  const startIso = dateStr.replace(/-/g, '') + 'T' + timeStr.replace(':', '') + '00';
+  const icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Angel Sanchez Maquillaje//ES
+BEGIN:VEVENT
+SUMMARY:Cita de Maquillaje - ${service}
+DESCRIPTION:Reserva de servicio con Angel Sanchez para ${name}.
+DTSTART:${startIso}
+DTEND:${startIso}
+LOCATION:Guatemala
+END:VEVENT
+END:VCALENDAR`;
+
+  const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+  const link = document.createElement('a');
+  link.href = window.URL.createObjectURL(blob);
+  link.setAttribute('download', `Cita_Angel_Sanchez_${dateStr}.ics`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+/* LÓGICA DE REGISTRO MANUAL (ADMIN) */
+document.getElementById('manualForm').addEventListener('submit', async function(e){
+  e.preventDefault();
+  if(!isAdmin) return;
+
+  const name = document.getElementById('mName').value.trim();
+  const phone = document.getElementById('mPhone').value.trim();
+  const date = document.getElementById('mDate').value;
+  const time = document.getElementById('mTime').value;
+
+  const checkedServs = Array.from(document.querySelectorAll('#mServicesDropdown input[name="mServices"]:checked')).map(c => c.value);
+  const serviceTitle = checkedServs.length > 0 ? checkedServs.join(', ') : 'Servicio general';
+
+  const newAppt = {
+    name,
+    phone,
+    date,
+    time,
+    service: serviceTitle,
+    status: 'confirmed',
+    createdAt: new Date().toISOString(),
+    userName: currentUser ? currentUser.name : name,
+    userEmail: currentUser ? currentUser.email : '',
+    userPhone: currentUser ? currentUser.phone : phone
+  };
+
+  if(window.db){
+    try {
+      const { collection, addDoc } = window.firestoreModules;
+      await addDoc(collection(window.db, "appointments"), newAppt);
+      this.reset();
+      document.getElementById('mDropdownLabel').textContent = "Elige tus servicios...";
+    } catch(err) { console.error("Error al registrar cita manual:", err); }
+  } else {
+    appointmentsData.push(newAppt);
+    renderAppts();
+    renderCalendar();
+    renderConfirmed();
+    this.reset();
+  }
+});
+
+/* ADMINISTRACIÓN Y LISTADO DE CITAS (MODO ADMIN) */
+function renderAppts(){
+  const list = document.getElementById('apptList');
+  if(!list) return;
+  list.innerHTML = '';
+
+  if(appointmentsData.length === 0){
+    list.innerHTML = `<div class="appt-empty">No hay solicitudes de citas registradas aún.</div>`;
+    return;
+  }
+
+  appointmentsData.sort((a,b) => new Date(b.date + 'T' + b.time) - new Date(a.date + 'T' + a.time));
+
+  appointmentsData.forEach(a => {
+    const row = document.createElement('div');
+    row.className = 'appt-row';
+
+    let statusBadgeClass = 'status-pending';
+    let statusLabel = 'Pendiente';
+    if(a.status === 'confirmed'){ statusBadgeClass = 'status-confirmed'; statusLabel = 'Confirmada'; }
+    if(a.status === 'declined'){ statusBadgeClass = 'status-declined'; statusLabel = 'Declinada'; }
+
+    row.innerHTML = `
+      <div>
+        <strong>${a.name} (${a.phone})</strong>
+        <span>📅 ${a.date} - ⏰ ${a.time}</span>
+        <span>💄 ${a.service || 'Maquillaje'}</span>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+        <span class="status-badge ${statusBadgeClass}">${statusLabel}</span>
+        <div class="appt-actions">
+          <button class="accept" onclick="updateApptStatus('${a.id}', 'confirmed')">Aceptar</button>
+          <button onclick="updateApptStatus('${a.id}', 'declined')">Rechazar</button>
+          <button onclick="deleteApptDoc('${a.id}')" style="color:var(--wine); border-color:var(--wine);">Borrar</button>
+        </div>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+}
+
+window.updateApptStatus = async function(id, newStatus){
+  if(!isAdmin || !id) return;
+  if(window.db){
+    try {
+      const { doc, updateDoc } = window.firestoreModules;
+      await updateDoc(doc(window.db, "appointments", id), { status: newStatus });
+    } catch(e) { console.error("Error al actualizar estado de cita:", e); }
+  }
+}
+
+window.deleteApptDoc = async function(id){
+  if(!isAdmin || !id) return;
+  if(!confirm('¿Deseas eliminar definitivamente este registro de cita?')) return;
+  if(window.db){
+    try {
+      const { doc, deleteDoc } = window.firestoreModules;
+      await deleteDoc(doc(window.db, "appointments", id));
+    } catch(e) { console.error("Error al eliminar cita:", e); }
+  }
+}
+
+/* LÓGICA DE CANCELACIÓN Y CITAS CONFIRMADAS DE LA AGENDA PÚBLICA DEL CLIENTE */
+function renderConfirmed(){
+  const wrap = document.getElementById('confirmedWrap');
+  if(!wrap) return;
+  wrap.innerHTML = '';
+
+  if(!currentUser){
+    wrap.innerHTML = `<div class="empty-note">Por favor <a href="javascript:void(0)" onclick="openAccountModal()" style="color:var(--gold); text-decoration:underline;">inicia sesión o crea una cuenta</a> para poder ver y gestionar tus citas asignadas a tu nombre.</div>`;
+    return;
+  }
+
+  // Filtrar para mostrar ÚNICAMENTE las citas del usuario que inició sesión
+  const userAppts = appointmentsData.filter(a => {
+    const isEmailMatch = a.userEmail && currentUser.email && a.userEmail === currentUser.email;
+    const isPhoneMatch = a.phone && currentUser.phone && a.phone === currentUser.phone;
+    const isUserPhoneMatch = a.userPhone && currentUser.phone && a.userPhone === currentUser.phone;
+    return isEmailMatch || isPhoneMatch || isUserPhoneMatch;
+  });
+
+  if(userAppts.length === 0){
+    wrap.innerHTML = `<div class="empty-note">No tienes citas registradas en este momento con tus datos de cuenta (${currentUser.email || currentUser.phone}).</div>`;
+    return;
+  }
+
+  userAppts.sort((a,b) => new Date(b.date + 'T' + b.time) - new Date(a.date + 'T' + a.time));
+
+  const now = new Date();
+  // Obtener fecha actual al inicio del día (00:00:00)
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  userAppts.forEach(a => {
+    const card = document.createElement('div');
+    card.className = 'client-agenda-card';
+
+    let badgeClass = 'pending';
+    let badgeTxt = 'Pendiente de Aprobación';
+    if(a.status === 'confirmed'){ badgeClass = 'confirmed'; badgeTxt = 'Cita Aceptada y Confirmada'; }
+    if(a.status === 'declined'){ badgeClass = 'declined'; badgeTxt = 'Cita Declinada / Cancelada'; }
+
+    // Cálculo estricto de diferencia de días para la regla de 2 días
+    const apptDateParts = a.date.split('-');
+    const apptDateTime = new Date(parseInt(apptDateParts[0]), parseInt(apptDateParts[1]) - 1, parseInt(apptDateParts[2]));
+    
+    // Diferencia en días enteros
+    const diffTime = apptDateTime.getTime() - todayStart.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 3600 * 24));
+
+    // Determinar si está dentro del rango de 2 días o ya venció
+    const isWithin2Days = diffDays <= 2;
+
+    let cancelControlHtml = '';
+    if (a.status !== 'declined') {
+      if (isWithin2Days) {
+        cancelControlHtml = `
+          <div style="display:flex; flex-direction:column; align-items:flex-end;">
+            <button class="cancel-btn" disabled title="No es posible cancelar faltando 2 días o menos">Cancelar Cita</button>
+            <span class="cancel-info-msg warning">⚠️ No se puede cancelar la cita: han llegado los 2 días de anticipación requeridos.</span>
+          </div>
+        `;
+      } else {
+        cancelControlHtml = `
+          <div style="display:flex; flex-direction:column; align-items:flex-end;">
+            <button class="cancel-btn" onclick="userCancelAppt('${a.id}')">Cancelar Cita</button>
+            <span class="cancel-info-msg">Puedes cancelar la cita. Recuerda que 2 días antes de la cita ya no podrás cancelarla.</span>
+          </div>
+        `;
+      }
+    }
+
+    card.innerHTML = `
+      <div class="client-agenda-info">
+        <h3>${a.service || 'Servicio de Maquillaje'}</h3>
+        <p><strong>Cliente:</strong> ${a.name} | <strong>Tel:</strong> ${a.phone}</p>
+        <p><strong>Fecha:</strong> 📅 ${a.date} | <strong>Hora:</strong> ⏰ ${a.time}</p>
+        <span class="details-more">📍 Estudio Angel Sanchez · Guatemala</span>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:10px;">
+        <span class="status-animated-badge ${badgeClass}">${badgeTxt}</span>
+        ${cancelControlHtml}
+      </div>
+    `;
+    wrap.appendChild(card);
+  });
+}
+
+/* FUNCIÓN PARA CANCELAR CITA POR EL CLIENTE */
+window.userCancelAppt = async function(id){
+  const appt = appointmentsData.find(a => a.id === id);
+  if (!appt) return;
+
+  // Verificación estricta de propiedad
+  const isOwner = (appt.userEmail && currentUser && appt.userEmail === currentUser.email) ||
+                  (appt.phone && currentUser && appt.phone === currentUser.phone) ||
+                  (appt.userPhone && currentUser && appt.userPhone === currentUser.phone);
+
+  if (!isOwner && !isAdmin) {
+    alert("Solo la persona que agendó esta cita puede cancelarla.");
+    return;
+  }
+
+  if (!confirm("¿Estás seguro de que deseas cancelar esta cita?")) return;
+
+  if (window.db) {
+    try {
+      const { doc, updateDoc } = window.firestoreModules;
+      await updateDoc(doc(window.db, "appointments", id), { status: 'declined' });
+      alert("Tu cita ha sido cancelada exitosamente.");
+    } catch(e) {
+      console.error("Error al cancelar la cita:", e);
+      alert("Ocurrió un error al procesar la cancelación.");
+    }
+  } else {
+    appt.status = 'declined';
+    renderConfirmed();
+    renderAppts();
+    renderCalendar();
+    alert("Tu cita ha sido cancelada.");
+  }
+}
+
+/* RENDEREADO Y NAVEGACIÓN DEL CALENDARIO DE DISPONIBILIDAD */
+function renderCalendar(){
+  const daysGrid = document.getElementById('calendarDaysGrid');
+  const monthTitle = document.getElementById('calendarMonthTitle');
+  if(!daysGrid || !monthTitle) return;
+
+  daysGrid.innerHTML = '';
+  
+  const year = calendarCurrentDate.getFullYear();
+  const month = calendarCurrentDate.getMonth();
+
+  const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  monthTitle.textContent = `${monthNames[month]} ${year}`;
+
+  const firstDayIndex = new Date(year, month, 1).getDay();
+  const totalDays = new Date(year, month + 1, 0).getDate();
+
+  /* Espacios vacíos antes del primer día */
+  for(let i=0; i<firstDayIndex; i++){
+    const emptyCell = document.createElement('div');
+    emptyCell.className = 'cal-day empty';
+    daysGrid.appendChild(emptyCell);
+  }
+
+  /* Días del mes */
+  for(let d=1; d<=totalDays; d++){
+    const dayCell = document.createElement('div');
+    dayCell.className = 'cal-day';
+    
+    const formattedMonth = String(month + 1).padStart(2, '0');
+    const formattedDay = String(d).padStart(2, '0');
+    const dateStr = `${year}-${formattedMonth}-${formattedDay}`;
+
+    // Filtrar citas confirmadas para esta fecha
+    const apptsForDay = appointmentsData.filter(a => a.date === dateStr && a.status === 'confirmed');
+
+    if(apptsForDay.length > 0){
+      dayCell.classList.add('has-appts');
+    }
+
+    if(selectedCalDate === dateStr){
+      dayCell.classList.add('selected');
+    }
+
+    dayCell.innerHTML = `<span>${d}</span>`;
+    dayCell.onclick = () => selectCalendarDay(dateStr, apptsForDay);
+
+    daysGrid.appendChild(dayCell);
+  }
+
+  /* Actualiza la vista de horas confirmadas */
+  if(selectedCalDate){
+    const apptsForSelected = appointmentsData.filter(a => a.date === selectedCalDate && a.status === 'confirmed');
+    renderConfirmedHoursForDay(selectedCalDate, apptsForSelected);
+  } else {
+    renderConfirmedHoursForDay(null, []);
+  }
+}
+
+function prevMonth(){
+  calendarCurrentDate.setMonth(calendarCurrentDate.getMonth() - 1);
+  selectedCalDate = null;
+  renderCalendar();
+}
+
+function nextMonth(){
+  calendarCurrentDate.setMonth(calendarCurrentDate.getMonth() + 1);
+  selectedCalDate = null;
+  renderCalendar();
+}
+
+function selectCalendarDay(dateStr, appts){
+  selectedCalDate = dateStr;
+  renderCalendar();
+}
+
+function renderConfirmedHoursForDay(dateStr, appts){
+  const title = document.getElementById('confirmedHoursTitle');
+  const grid = document.getElementById('confirmedHoursGrid');
+  if(!title || !grid) return;
+
+  grid.innerHTML = '';
+
+  if(!dateStr){
+    title.textContent = "Selecciona un día en el calendario para consultar las citas confirmadas.";
+    grid.innerHTML = `<div class="no-appts-msg">No se ha seleccionado ninguna fecha.</div>`;
+    return;
+  }
+
+  title.textContent = `Citas Ocupadas y Confirmadas para el ${dateStr}:`;
+
+  if(appts.length === 0){
+    grid.innerHTML = `<div class="no-appts-msg">✨ ¡Día completamente libre! No hay citas confirmadas aún.</div>`;
+    return;
+  }
+
+  appts.sort((a,b) => a.time.localeCompare(b.time));
+
+  appts.forEach(a => {
+    const card = document.createElement('div');
+    card.className = 'confirmed-hour-card';
+    card.innerHTML = `
+      <span class="time">⏰ ${a.time} hrs</span>
+      <span class="service-title">💄 ${a.service || 'Servicio reservado'}</span>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+/* RESUMEN Y ESTADÍSTICAS FINANCIERAS PARA EL ADMIN */
+function renderFinancialStats(){
+  const container = document.getElementById('statsGridContainer');
+  if(!container) return;
+  container.innerHTML = '';
+
+  const confirmedAppts = appointmentsData.filter(a => a.status === 'confirmed');
+
+  if(confirmedAppts.length === 0){
+    container.innerHTML = `<p style="color:var(--ink-dim); font-size:0.9rem;">No hay citas confirmadas registradas para calcular ingresos.</p>`;
+    return;
+  }
+
+  /* Agrupar ingresos por servicio y mes */
+  let totalRevenue = 0;
+  const monthTotals = {};
+
+  confirmedAppts.forEach(a => {
+    let apptPrice = 0;
+    const servObj = siteData.services.find(s => s.title === a.service);
+    if(servObj && servObj.rawPrice){
+      apptPrice = servObj.rawPrice;
+    } else {
+      /* Extraer valor numérico del string si es posible */
+      const match = a.service ? a.service.match(/\d+/) : null;
+      if(match) apptPrice = parseFloat(match[0]);
+    }
+
+    totalRevenue += apptPrice;
+
+    const monthKey = a.date ? a.date.substring(0, 7) : 'Sin fecha';
+    monthTotals[monthKey] = (monthTotals[monthKey] || 0) + apptPrice;
+  });
+
+  /* Tarjeta Total General */
+  const totalCard = document.createElement('div');
+  totalCard.className = 'stat-card';
+  totalCard.innerHTML = `<span>Ingresos Totales</span><strong>Q${totalRevenue.toFixed(2)}</strong>`;
+  container.appendChild(totalCard);
+
+  /* Tarjetas por mes */
+  Object.keys(monthTotals).forEach(m => {
+    const mCard = document.createElement('div');
+    mCard.className = 'stat-card';
+    mCard.innerHTML = `<span>Mes: ${m}</span><strong>Q${monthTotals[m].toFixed(2)}</strong>`;
+    container.appendChild(mCard);
+  });
+}
+
+/* MODAL DE IMÁGENES DE GALERÍA */
 function openModal(src){
   document.getElementById('modalImg').src = src;
   document.getElementById('imageModal').classList.add('active');
@@ -1751,485 +2204,56 @@ function closeModal(){
   document.getElementById('imageModal').classList.remove('active');
 }
 
-/* LÓGICA DEL CALENDARIO INTERACTIVO (MUESTRA ÚNICAMENTE CITAS ACEPTADAS POR EL ADMIN) */
-const monthNamesEs = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+/* DRAG AND DROP / REORDENAMIENTO DE SECCIONES (ADMIN) */
+function initDragAndDrop(){
+  if(!isAdmin) return;
+  const main = document.getElementById('mainSectionsContainer');
+  const sections = main.querySelectorAll('.draggable-section');
 
-function renderCalendar(){
-  const title = document.getElementById('calendarMonthTitle');
-  const grid = document.getElementById('calendarDaysGrid');
-  if(!title || !grid) return;
+  sections.forEach(sec => {
+    sec.setAttribute('draggable', 'true');
 
-  const year = calendarCurrentDate.getFullYear();
-  const month = calendarCurrentDate.getMonth();
+    sec.addEventListener('dragstart', (e) => {
+      sec.classList.add('dragging');
+      e.dataTransfer.setData('text/plain', sec.dataset.sectionId);
+    });
 
-  title.textContent = `${monthNamesEs[month]} ${year}`;
-  grid.innerHTML = '';
+    sec.addEventListener('dragend', () => {
+      sec.classList.remove('dragging');
+      saveSectionsOrder();
+    });
 
-  const firstDay = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-  for(let i = 0; i < firstDay; i++){
-    const empty = document.createElement('div');
-    empty.className = 'cal-day empty';
-    grid.appendChild(empty);
-  }
-
-  for(let day = 1; day <= daysInMonth; day++){
-    const dayCell = document.createElement('div');
-    dayCell.className = 'cal-day';
-    dayCell.textContent = day;
-
-    const formattedDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    
-    // Marca en rojo solo si hay citas confirmadas/aceptadas por el administrador
-    const hasConfirmedAppts = appointmentsData.some(a => a.date === formattedDate && a.status === 'confirmed');
-    if(hasConfirmedAppts) {
-      dayCell.classList.add('has-appts');
-    }
-
-    if(selectedCalDate === formattedDate){
-      dayCell.classList.add('selected');
-    }
-
-    dayCell.onclick = () => selectCalendarDate(formattedDate);
-    grid.appendChild(dayCell);
-  }
-
-  renderConfirmedHours();
-}
-
-function prevMonth(){
-  calendarCurrentDate.setMonth(calendarCurrentDate.getMonth() - 1);
-  renderCalendar();
-}
-
-function nextMonth(){
-  calendarCurrentDate.setMonth(calendarCurrentDate.getMonth() + 1);
-  renderCalendar();
-}
-
-function selectCalendarDate(dateStr){
-  selectedCalDate = dateStr;
-  renderCalendar();
-}
-
-/* DESPLIEGA ÚNICAMENTE LAS CITAS ACEPTADAS/CONFIRMADAS POR EL ADMIN */
-function renderConfirmedHours(){
-  const hoursGrid = document.getElementById('confirmedHoursGrid');
-  const hoursTitle = document.getElementById('confirmedHoursTitle');
-  if(!hoursGrid || !hoursTitle) return;
-
-  hoursGrid.innerHTML = '';
-
-  if(!selectedCalDate){
-    hoursTitle.textContent = "Selecciona un día en el calendario para consultar las citas confirmadas:";
-    return;
-  }
-
-  const [y, m, d] = selectedCalDate.split('-');
-  hoursTitle.textContent = `Citas confirmadas para el ${d} de ${monthNamesEs[parseInt(m)-1]}:`;
-
-  // Citas confirmadas por el administrador en esta fecha
-  const confirmedAppts = appointmentsData.filter(a => a.date === selectedCalDate && a.status === 'confirmed');
-
-  if(confirmedAppts.length === 0){
-    hoursGrid.innerHTML = `<div class="no-appts-msg">No hay citas confirmadas para este día. Día completamente disponible.</div>`;
-    return;
-  }
-
-  // Ordenar cronológicamente por hora
-  confirmedAppts.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-
-  confirmedAppts.forEach(appt => {
-    const card = document.createElement('div');
-    card.className = 'confirmed-hour-card';
-    card.innerHTML = `
-      <div class="time">⏰ ${appt.time || 'Hora no especificada'}</div>
-      <div class="service-title">📌 ${appt.service || 'Servicio agendado'}</div>
-    `;
-    hoursGrid.appendChild(card);
-  });
-}
-
-function createCalendarEvent(title, description, date, time) {
-  const startDateTime = new Date(`${date}T${time}:00`);
-  const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000);
-  const formatDateICS = (d) => d.toISOString().replace(/-|:|\.\d+/g, '');
-  
-  const icsData = [
-    'BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT',
-    `SUMMARY:${title}`, `DESCRIPTION:${description}`,
-    `DTSTART:${formatDateICS(startDateTime)}`,
-    `DTEND:${formatDateICS(endDateTime)}`,
-    'END:VEVENT', 'END:VCALENDAR'
-  ].join('\r\n');
-
-  const blob = new Blob([icsData], { type: 'text/calendar;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.setAttribute('download', `Cita_AngelSanchez_${date}.ics`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-}
-
-document.getElementById('bookingForm').addEventListener('submit', async function(e){
-  e.preventDefault();
-
-  if (!currentUser) {
-    openAccountModal();
-    return;
-  }
-
-  const name = document.getElementById('bName').value;
-  const phone = document.getElementById('bPhone').value;
-  const date = document.getElementById('bDate').value;
-  const time = document.getElementById('bTime').value;
-
-  const todayStr = new Date().toISOString().split('T')[0];
-  if (date < todayStr) {
-    alert('No puedes seleccionar días que ya pasaron.');
-    return;
-  }
-
-  const selectedBoxes = document.querySelectorAll('input[name="bServices"]:checked');
-  const selectedServices = Array.from(selectedBoxes).map(cb => cb.value);
-  if(selectedServices.length === 0){
-    alert('Por favor selecciona al menos un servicio.');
-    return;
-  }
-  const serviceText = selectedServices.join(', ');
-
-  const newAppt = { 
-    name, 
-    phone, 
-    date, 
-    time, 
-    service: serviceText, 
-    userEmail: currentUser ? currentUser.email : 'Sin registrar',
-    source:'Formulario web', 
-    status:'pending', 
-    createdAt: new Date().toISOString() 
-  };
-  
-  try {
-    const { collection, addDoc } = window.firestoreModules;
-    const docRef = await addDoc(collection(window.db, "appointments"), newAppt);
-    newAppt.id = docRef.id;
-    appointmentsData.unshift(newAppt);
-    renderAppts();
-    renderCalendar();
-    renderConfirmed();
-  } catch(err) {
-    console.error("Error al guardar cita en Firebase:", err);
-  }
-
-  const msg = `Hola Angel, quiero reservar una cita:\n\nNombre: ${name}\nTeléfono: ${phone}\nFecha: ${date}\nHora: ${time}\nServicios: ${serviceText}`;
-  window.open(`https://api.whatsapp.com/send?phone=50236307602&text=${encodeURIComponent(msg)}`, '_blank');
-  createCalendarEvent(`Cita de Maquillaje - ${serviceText}`, `Cita registrada con Angel Sanchez.`, date, time);
-
-  const confirmMsg = document.getElementById('confirmMsg');
-  confirmMsg.style.display = 'block';
-  confirmMsg.innerHTML = '¡Solicitud registrada! Revisa "Mis Citas" para ver el estado de aprobación.';
-  this.reset();
-  updateDropdownLabel('bServicesDropdown', 'bDropdownLabel', 'bServices');
-});
-
-/* FORMULARIO MANUAL PARA EL ADMINISTRADOR */
-document.getElementById('manualForm').addEventListener('submit', async function(e){
-  e.preventDefault();
-  const name = document.getElementById('mName').value;
-  const phone = document.getElementById('mPhone').value;
-  const date = document.getElementById('mDate').value;
-  const time = document.getElementById('mTime').value;
-
-  const selectedBoxes = document.querySelectorAll('input[name="mServices"]:checked');
-  const selectedServices = Array.from(selectedBoxes).map(cb => cb.value);
-  if(selectedServices.length === 0){
-    alert('Por favor selecciona al menos un servicio.');
-    return;
-  }
-  const serviceText = selectedServices.join(', ');
-
-  const newAppt = {
-    name,
-    phone,
-    date,
-    time,
-    service: serviceText,
-    source: 'Administrador (Manual)',
-    status: 'confirmed',
-    createdAt: new Date().toISOString()
-  };
-
-  try {
-    const { collection, addDoc } = window.firestoreModules;
-    const docRef = await addDoc(collection(window.db, "appointments"), newAppt);
-    newAppt.id = docRef.id;
-    appointmentsData.unshift(newAppt);
-    renderAppts();
-    renderCalendar();
-    renderConfirmed();
-    alert('¡Cita agendada correctamente por el administrador!');
-    this.reset();
-    updateDropdownLabel('mServicesDropdown', 'mDropdownLabel', 'mServices');
-  } catch(err) {
-    console.error("Error al registrar cita manual:", err);
-  }
-});
-
-function renderConfirmed(){
-  const wrap = document.getElementById('confirmedWrap');
-  if(!wrap) return;
-  const appts = appointmentsData || [];
-  
-  let displayAppts = appts;
-  if(currentUser && !isAdmin){
-    displayAppts = appts.filter(a => a.userEmail === currentUser.email || a.phone === currentUser.phone);
-  }
-
-  if(displayAppts.length === 0){ 
-    wrap.innerHTML = `<div class="empty-note">${currentUser ? 'Aún no tienes citas registradas.' : 'Debes iniciar sesión para visualizar y gestionar tus citas.'}</div>`; 
-    return; 
-  }
-  
-  wrap.innerHTML = '';
-  displayAppts.forEach(a => {
-    const card = document.createElement('div'); card.className = 'client-agenda-card';
-    let statusBadge = a.status === 'confirmed' ? '<span class="status-animated-badge confirmed">✓ Confirmada por el Estudio</span>' : a.status === 'declined' ? '<span class="status-animated-badge declined">✕ Declinada</span>' : '<span class="status-animated-badge pending">⏳ En espera de revisión</span>';
-    
-    let cancelActionHtml = '';
-    if (a.status !== 'declined') {
-      cancelActionHtml = `<button class="cancel-btn" onclick="cancelAppointment('${a.id}', '${a.date}')">Cancelar Cita</button>`;
-    }
-
-    card.innerHTML = `
-      <div class="client-agenda-info">
-        <h3>${a.service || 'Servicio de Maquillaje'}</h3>
-        <p><strong>Fecha:</strong> ${a.date} · <strong>Hora:</strong> ${a.time}</p>
-        <span class="details-more">Cliente: ${a.name || (currentUser ? currentUser.name : 'No especificado')} · ${a.phone}</span>
-      </div>
-      <div style="display:flex; align-items:center; gap:12px;">
-        ${statusBadge}
-        ${cancelActionHtml}
-      </div>
-    `;
-    wrap.appendChild(card);
-  });
-}
-
-window.cancelAppointment = async function(id, apptDateStr) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const [year, month, day] = apptDateStr.split('-').map(Number);
-  const apptDate = new Date(year, month - 1, day);
-  apptDate.setHours(0, 0, 0, 0);
-
-  const diffTime = apptDate - today;
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-  if (diffDays < 2) {
-    alert('La cita no se puede cancelar, comunícate con el estudio.');
-    return;
-  }
-
-  if (!confirm('¿Estás seguro de que deseas cancelar esta cita?')) return;
-
-  if (id && window.db) {
-    try {
-      const { doc, deleteDoc } = window.firestoreModules;
-      await deleteDoc(doc(window.db, "appointments", id));
-      appointmentsData = appointmentsData.filter(a => a.id !== id);
-      renderAppts();
-      renderCalendar();
-      renderConfirmed();
-      alert('Tu cita ha sido cancelada exitosamente.');
-    } catch(e) {
-      console.error("Error al cancelar la cita:", e);
-    }
-  }
-};
-
-function renderAppts(){
-  const list = document.getElementById('apptList');
-  if(!list) return;
-  list.innerHTML = '';
-
-  if(appointmentsData.length === 0){
-    list.innerHTML = `<div class="appt-empty">No hay solicitudes de citas por el momento.</div>`;
-    return;
-  }
-
-  appointmentsData.forEach(a => {
-    const row = document.createElement('div');
-    row.className = 'appt-row';
-    
-    let statusClass = a.status === 'confirmed' ? 'status-confirmed' : a.status === 'declined' ? 'status-declined' : 'status-pending';
-    let statusLabel = a.status === 'confirmed' ? 'Confirmada' : a.status === 'declined' ? 'Rechazada' : 'Pendiente';
-
-    row.innerHTML = `
-      <div>
-        <strong>${a.name} (${a.phone})</strong>
-        <span>📅 ${a.date} | ⏰ ${a.time}</span>
-        <span>🛠️ ${a.service}</span>
-        <span style="color:var(--gold-soft); font-size:0.72rem;">Origen: ${a.source || 'Web'}</span>
-      </div>
-      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
-        <span class="status-badge ${statusClass}">${statusLabel}</span>
-        <div class="appt-actions">
-          <button class="accept" onclick="updateApptStatus('${a.id}', 'confirmed')">Aceptar</button>
-          <button onclick="updateApptStatus('${a.id}', 'declined')">Rechazar</button>
-          <button onclick="deleteAppt('${a.id}')" style="color:var(--wine);">Eliminar</button>
-        </div>
-      </div>
-    `;
-    list.appendChild(row);
-  });
-
-  renderFinancialStats();
-}
-
-async function updateApptStatus(id, newStatus){
-  if(!id || !window.db) return;
-  try {
-    const { doc, updateDoc } = window.firestoreModules;
-    await updateDoc(doc(window.db, "appointments", id), { status: newStatus });
-  } catch(e) {
-    console.error("Error actualizando cita:", e);
-  }
-}
-
-async function deleteAppt(id){
-  if(!id || !window.db) return;
-  if(!confirm('¿Eliminar registro de cita permanentemente?')) return;
-  try {
-    const { doc, deleteDoc } = window.firestoreModules;
-    await deleteDoc(doc(window.db, "appointments", id));
-  } catch(e) {
-    console.error("Error eliminando cita:", e);
-  }
-}
-
-function renderFinancialStats(){
-  const statsWrap = document.getElementById('statsGridContainer');
-  if(!statsWrap) return;
-  statsWrap.innerHTML = '';
-
-  const confirmed = appointmentsData.filter(a => a.status === 'confirmed');
-  
-  let totalRevenue = 0;
-  let serviceCounts = {};
-  let monthlyRevenue = {};
-
-  confirmed.forEach(appt => {
-    let serviceNames = (appt.service || '').split(',').map(s => s.trim());
-    
-    serviceNames.forEach(sName => {
-      let matchedServ = siteData.services.find(s => s.title.toLowerCase() === sName.toLowerCase());
-      let price = matchedServ ? (matchedServ.rawPrice || 200) : 200;
-      
-      totalRevenue += price;
-      serviceCounts[sName] = (serviceCounts[sName] || 0) + 1;
-
-      if(appt.date){
-        let monthKey = appt.date.substring(0, 7);
-        monthlyRevenue[monthKey] = (monthlyRevenue[monthKey] || 0) + price;
+    sec.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      const dragging = main.querySelector('.dragging');
+      if(dragging && dragging !== sec){
+        const rect = sec.getBoundingClientRect();
+        const next = (e.clientY - rect.top) > (rect.height / 2);
+        main.insertBefore(dragging, next ? sec.nextSibling : sec);
       }
     });
   });
-
-  const totalCard = document.createElement('div');
-  totalCard.className = 'stat-card';
-  totalCard.innerHTML = `<span>Ingresos Totales (Citas Confirmadas)</span><strong>Q${totalRevenue}</strong>`;
-  statsWrap.appendChild(totalCard);
-
-  const totalApptsCard = document.createElement('div');
-  totalApptsCard.className = 'stat-card';
-  totalApptsCard.innerHTML = `<span>Citas Confirmadas</span><strong>${confirmed.length} citas</strong>`;
-  statsWrap.appendChild(totalApptsCard);
-
-  Object.keys(monthlyRevenue).sort().reverse().forEach(m => {
-    const card = document.createElement('div');
-    card.className = 'stat-card';
-    card.innerHTML = `<span>Mes: ${m}</span><strong>Q${monthlyRevenue[m]}</strong>`;
-    statsWrap.appendChild(card);
-  });
 }
 
-function initDragAndDrop() {
-  if (!isAdmin) return;
-  const sections = document.querySelectorAll('main > section');
-  sections.forEach(section => {
-    section.setAttribute('draggable', 'true');
-    section.addEventListener('dragstart', handleDragStart);
-    section.addEventListener('dragover', handleDragOver);
-    section.addEventListener('drop', handleDrop);
-    section.addEventListener('dragend', handleDragEnd);
-  });
-}
-
-let dragSrcEl = null;
-
-function handleDragStart(e) {
-  if (!isAdmin) return;
-  dragSrcEl = this;
-  this.classList.add('dragging');
-  e.dataTransfer.effectAllowed = 'move';
-}
-
-function handleDragOver(e) {
-  if (!isAdmin) return;
-  if (e.preventDefault) e.preventDefault();
-  e.dataTransfer.dropEffect = 'move';
-  return false;
-}
-
-function handleDrop(e) {
-  if (!isAdmin) return;
-  if (e.stopPropagation) e.stopPropagation();
-  if (dragSrcEl !== this) {
-    const main = document.getElementById('mainSectionsContainer');
-    const sections = Array.from(main.querySelectorAll('main > section'));
-    const srcIndex = sections.indexOf(dragSrcEl);
-    const targetIndex = sections.indexOf(this);
-    if (srcIndex < targetIndex) {
-      this.parentNode.insertBefore(dragSrcEl, this.nextSibling);
-    } else {
-      this.parentNode.insertBefore(dragSrcEl, this);
-    }
-    saveSectionsOrder();
-  }
-  return false;
-}
-
-function handleDragEnd() {
-  this.classList.remove('dragging');
-}
-
-function saveSectionsOrder() {
-  const sections = document.querySelectorAll('main > section');
-  const order = Array.from(sections).map(s => s.getAttribute('data-section-id')).filter(Boolean);
-  localStorage.setItem('sectionsOrder', JSON.stringify(order));
-  if (window.db) {
-    try {
-      const { doc, setDoc } = window.firestoreModules;
-      setDoc(doc(window.db, "config", "layout"), { order });
-    } catch (e) {
-      console.error("Error guardando orden de secciones:", e);
-    }
-  }
-}
-
-function restoreSectionsOrder() {
-  const savedOrder = JSON.parse(localStorage.getItem('sectionsOrder') || 'null');
-  if (!savedOrder) return;
+function saveSectionsOrder(){
   const main = document.getElementById('mainSectionsContainer');
-  savedOrder.forEach(id => {
-    const section = main.querySelector(`section[data-section-id="${id}"]`);
-    if (section) main.appendChild(section);
-  });
+  const sections = main.querySelectorAll('.draggable-section');
+  const order = Array.from(sections).map(s => s.dataset.sectionId);
+  localStorage.setItem('sectionsOrder', JSON.stringify(order));
+}
+
+function restoreSectionsOrder(){
+  const main = document.getElementById('mainSectionsContainer');
+  const orderStr = localStorage.getItem('sectionsOrder');
+  if(!orderStr || !main) return;
+
+  try {
+    const order = JSON.parse(orderStr);
+    order.forEach(id => {
+      const sec = main.querySelector(`[data-section-id="${id}"]`);
+      if(sec) main.appendChild(sec);
+    });
+  } catch(e) { console.error("Error restaurando orden de secciones:", e); }
 }
 </script>
 </body>
